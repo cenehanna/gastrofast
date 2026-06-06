@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог закладів — GastroFast</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <h2 onclick="window.location.href='index.html'" style="cursor:pointer;">🍕 GastroFast</h2>
+            <p>Адреса доставки: <span id="display-address" style="font-weight:bold; color:#ff5722;"></span></p>
+        </div>
+    </header>
+
+    <main class="catalog-container">
+        <section id="main-content" class="content-left">
+        </section>
+
+        <section id="cart-sidebar" class="cart-section hidden">
+            <h2>Ваше Замовлення</h2>
+            <div id="cart-items">
+                <p class="empty-cart">Кошик порожній</p>
+            </div>
+            <div class="cart-total">
+                <strong>Разом: <span id="total-amount">0</span> грн</strong>
+            </div>
+            <hr>
+            <h3>Оформити доставку</h3>
+            <form id="order-form" onsubmit="submitOrder(event)">
+                <label for="client-name">Ваше Ім'я:</label>
+                <input type="text" id="client-name" required placeholder="Іван">
+
+                <label for="client-phone">Телефон:</label>
+                <input type="tel" id="client-phone" required placeholder="+380...">
+
+                <button type="submit" class="btn-submit">Підтвердити замовлення</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+   <!--  <script>
+        // Коли сторінка завантажується, відразу показуємо заклади
+        document.addEventListener("DOMContentLoaded", () => {
+            initCatalog();
+        });
+    </script> -->
+</body>
+
+</html>

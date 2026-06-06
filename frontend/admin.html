@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель адміністратора — GastroFast</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <h2>⚙️ Панель керування GastroFast (Admin MVP)</h2>
+            <button onclick="window.location.href='catalog.html'" class="btn-back" style="margin-bottom: 0;">Перейти в
+                каталог</button>
+        </div>
+    </header>
+
+    <main class="admin-container" style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
+        <h1>Активні замовлення закладу</h1>
+        <p style="color: #7f8c8d; margin-bottom: 20px;">Тут відображаються замовлення, які клієнти оформили на сайті. Ви
+            можете змінювати їхній статус у реальному часі.</p>
+
+        <div style="overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Клієнт</th>
+                        <th>Телефон</th>
+                        <th>Адреса доставки</th>
+                        <th>Що замовили</th>
+                        <th>Сума</th>
+                        <th>Статус замовлення</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-orders-table">
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+   <!--  <script>
+        // При завантаженні сторінки адміна відразу виводимо замовлення
+        document.addEventListener("DOMContentLoaded", () => {
+            initAdminPanel();
+        });
+    </script> -->
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог закладів — GastroFast</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="welcome-bg">
+    <div id="auth-header" style="position: absolute; top: 20px; right: 20px;">
+    </div>
+
+    <div class="welcome-card">
+        <h1 id="welcome-title">🍕 GastroFast MVP</h1>
+        <p>Найсмачніша їжа у твоєму місті. Введіть адресу для пошуку:</p>
+
+        <div class="address-box">
+            <input type="text" id="user-address" placeholder="м. Полтава, вул. Соборності, 10" required>
+            <button onclick="saveAddressAndGo()">Знайти їжу</button>
+        </div>
+
+        <div id="saved-addresses-block" class="hidden" style="margin-top: 20px; text-align: left;">
+            <p style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 8px;">Ваші збережені адреси:</p>
+            <div id="addresses-buttons-container" style="display: flex; gap: 10px;">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+   <!--  <script>
+        // При завантаженні index.html перевіряємо, чи користувач авторизований
+        document.addEventListener("DOMContentLoaded", () => {
+            checkUserAuth();
+        });
+    </script> -->
+</body>
+
+</html>
