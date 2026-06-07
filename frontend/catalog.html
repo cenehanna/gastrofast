@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Каталог закладів — GastroFast</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -13,6 +13,7 @@
         <div class="header-container">
             <h2 onclick="window.location.href='index.html'" style="cursor:pointer;">🍕 GastroFast</h2>
             <p>Адреса доставки: <span id="display-address" style="font-weight:bold; color:#ff5722;"></span></p>
+            <div id="auth-header" style="display:flex; align-items:center; gap:10px;"></div>
         </div>
     </header>
 
@@ -21,7 +22,10 @@
         </section>
 
         <section id="cart-sidebar" class="cart-section hidden">
-            <h2>Ваше Замовлення</h2>
+            <div class="cart-header">
+                <h2>Ваше Замовлення</h2>
+                <button id="close-cart-btn" class="close-cart-btn" onclick="toggleMobileCart(false)">✕</button>
+            </div>
             <div id="cart-items">
                 <p class="empty-cart">Кошик порожній</p>
             </div>
@@ -31,24 +35,29 @@
             <hr>
             <h3>Оформити доставку</h3>
             <form id="order-form" onsubmit="submitOrder(event)">
-                <label for="client-name">Ваше Ім'я:</label>
-                <input type="text" id="client-name" required placeholder="Іван">
+                <div id="order-user-fields">
+                    <label for="client-name">Ваше Ім'я:</label>
+                    <input type="text" id="client-name" required placeholder="Іван">
 
-                <label for="client-phone">Телефон:</label>
-                <input type="tel" id="client-phone" required placeholder="+380...">
+                    <label for="client-phone">Телефон:</label>
+                    <input type="tel" id="client-phone" required placeholder="+380...">
+                </div>
+
+                <div id="order-user-note" style="margin-bottom: 15px; color: #2c3e50; font-weight: 600; display: none;"></div>
 
                 <button type="submit" class="btn-submit">Підтвердити замовлення</button>
             </form>
         </section>
     </main>
 
+    <!-- Мобільна плашка кошика -->
+    <div id="mobile-cart-bar" class="mobile-cart-bar hidden" onclick="toggleMobileCart(true)">
+        <span>🛒 Кошик</span>
+        <span id="mobile-cart-count">0</span>
+        <span id="mobile-cart-total">0 грн</span>
+    </div>
+
     <script src="script.js"></script>
-   <!--  <script>
-        // Коли сторінка завантажується, відразу показуємо заклади
-        document.addEventListener("DOMContentLoaded", () => {
-            initCatalog();
-        });
-    </script> -->
 </body>
 
 </html>

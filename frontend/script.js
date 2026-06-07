@@ -2,77 +2,27 @@
 let cart = [];
 let currentRestaurantId = null;
 let currentRestaurantName = "";
-let isMobileCartOpen = false;
-
-// --- ТЕСТОВІ ДАНІ (БАЗА ДАНИХ MVP) ---
-const restaurants = [
-  {
-    id: 1,
-    name: "Піцерія Bella Italia",
-    img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400",
-    desc: "Справжня італійська піца на дровах",
-  },
-  {
-    id: 2,
-    name: "Burger Club",
-    img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
-    desc: "Соковиті бургери та картопля фрі",
-  },
-];
-
-const dishes = {
-  1: [
-    {
-      id: "p1",
-      name: "Піца Капрічоза",
-      price: 190,
-      desc: "Томати, моцарела, шинка, гриби",
-      img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200",
-    },
-    {
-      id: "p2",
-      name: "Піца Маргарита",
-      price: 150,
-      desc: "Класична піца з томатами та сиром",
-      img: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=200",
-    },
-  ],
-  2: [
-    {
-      id: "b1",
-      name: "Бургер Класичний",
-      price: 140,
-      desc: "Яловича котлета, сир чеддер, соус",
-      img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200",
-    },
-    {
-      id: "b2",
-      name: "Картопля Фрі",
-      price: 60,
-      desc: "Хрустка картопля з сіллю",
-      img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=200",
-    },
-  ],
-};
+let isMobileCartOpen = false; // Додаємо назад цей прапорець
 
 // --- РОЗДІЛЕННЯ ЗАПУСКУ ЗАЛЕЖНО ВІД СТОРІНКИ ---
 document.addEventListener("DOMContentLoaded", () => {
   const path = window.location.pathname;
 
+  renderAuthHeader();
+
   if (path.includes("index.html") || path.endsWith("/")) {
-    // Запуск логіки для Головної сторінки
-    checkUserAuth();
+    renderAuthHeader();
   } else if (path.includes("catalog.html")) {
-    // Запуск логіки відновлення стану для Каталогу
     restorePageState();
+    configureOrderForm();
+  } else if (path.includes("login.html") || path.includes("register.html")) {
+    redirectIfAuthenticatedForAuthPages();
   } else if (path.includes("admin.html")) {
-    // Запуск логіки для Адмінки
     initAdminPanel();
   }
 });
 
 // --- СИСТЕМА ЗБЕРЕЖЕННЯ ТА ВІДНОВЛЕННЯ СТАНУ (F5 PROTECT) ---
-
 function savePageState() {
   sessionStorage.setItem("cart", JSON.stringify(cart));
   sessionStorage.setItem("currentRestaurantId", currentRestaurantId);
@@ -91,26 +41,26 @@ function restorePageState() {
     document.getElementById("display-address").innerText = address;
   }
 
-  // Зчитуємо кошик з пам'яті
   const savedCart = sessionStorage.getItem("cart");
   if (savedCart && savedCart !== "undefined") {
     cart = JSON.parse(savedCart);
   }
 
-  // Зчитуємо обраний ресторан
   const savedRestId = sessionStorage.getItem("currentRestaurantId");
 
   if (savedRestId && savedRestId !== "null" && savedRestId !== "undefined") {
     currentRestaurantId = Number(savedRestId);
     currentRestaurantName =
       sessionStorage.getItem("currentRestaurantName") || "";
-    isMobileCartOpen = sessionStorage.getItem("isMobileCartOpen") === "true";
+    isMobileCartOpen = sessionStorage.getItem("isMobileCartOpen") === "true"; // Відновлюємо прапорець
 
-    // Завантажуємо сторінку страв (передаємо false, щоб кошик НЕ очищався!)
-    loadRestaurantMenu(currentRestaurantId, currentRestaurantName, false);
+    loadRestaurantMenuFromAPI(
+      currentRestaurantId,
+      currentRestaurantName,
+      false,
+    );
   } else {
-    // Якщо ресторану в пам'яті немає — показуємо звичайну сітку закладів
-    initCatalog();
+    fetchRestaurants();
   }
 }
 
@@ -121,7 +71,6 @@ function goBackToWelcome() {
 }
 
 // --- ЛОГІКА СТОРІНКИ ПРИВІТАННЯ (index.html) ---
-
 function saveAddressAndGo() {
   const addressInput = document.getElementById("user-address").value;
   if (!addressInput.trim()) {
@@ -129,7 +78,7 @@ function saveAddressAndGo() {
     return;
   }
   localStorage.setItem("userAddress", addressInput);
-  sessionStorage.removeItem("currentRestaurantId"); // Чистимо старий бренд для нової адреси
+  sessionStorage.removeItem("currentRestaurantId");
   window.location.href = "catalog.html";
 }
 
@@ -139,159 +88,302 @@ function selectSavedAddress(address) {
   saveAddressAndGo();
 }
 
-// --- АВТОРИЗАЦІЯ ТА ПРОФІЛЬ КОРИСТУВАЧА ---
-
-function simulateLogin() {
-  const userMock = {
-    name: "Олександр",
-    token: "jwt-secret-token-xyz",
-    savedAddresses: ["вул. Соборності, 10", "вул. Котляревського, 4"],
-  };
-  localStorage.setItem("user", JSON.stringify(userMock));
-  window.location.reload();
-}
-
-function simulateLogout() {
-  localStorage.removeItem("user");
-  localStorage.removeItem("userAddress");
-  sessionStorage.clear();
-  window.location.reload();
-}
-
-function checkUserAuth() {
-  const authHeader = document.getElementById("auth-header");
-  const welcomeTitle = document.getElementById("welcome-title");
-  const savedAddressesBlock = document.getElementById("saved-addresses-block");
-
-  if (!authHeader || !welcomeTitle) return;
-
+// --- АУТЕНТИФІКАЦІЯ ТА ПРОФІЛЬ КОРИСТУВАЧА ---
+function getAuthUser() {
   const userJson = localStorage.getItem("user");
+  return userJson ? JSON.parse(userJson) : null;
+}
 
-  if (userJson) {
-    const user = JSON.parse(userJson);
-    welcomeTitle.innerText = `🍕 Вітаємо, ${user.name}!`;
+function getAuthToken() {
+  return localStorage.getItem("token");
+}
+
+function isAuthenticated() {
+  return !!getAuthToken();
+}
+
+function renderAuthHeader() {
+  const authHeader = document.getElementById("auth-header");
+  const savedAddressesBlock = document.getElementById("saved-addresses-block");
+  const welcomeTitle = document.getElementById("welcome-title");
+
+  if (!authHeader) return;
+
+  const user = getAuthUser();
+
+  if (user) {
     authHeader.innerHTML = `
-            <span style="color: white; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
-            <button onclick="simulateLogout()" style="padding: 5px 10px; border-radius: 5px; cursor: pointer;">Вийти</button>
-        `;
+      <span style="color: white; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
+      <button onclick="logout()" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+        Вийти
+      </button>
+    `;
 
-    if (
-      user.savedAddresses &&
-      user.savedAddresses.length > 0 &&
-      savedAddressesBlock
-    ) {
+    if (welcomeTitle) welcomeTitle.innerText = `🍕 Вітаємо, ${user.name}!`;
+
+    if (user.savedAddresses && user.savedAddresses.length > 0 && savedAddressesBlock) {
       savedAddressesBlock.classList.remove("hidden");
       const container = document.getElementById("addresses-buttons-container");
       if (container) {
         let buttonsHtml = "";
         user.savedAddresses.forEach((addr) => {
           buttonsHtml += `
-                        <button onclick="selectSavedAddress('${addr}')" style="background: #edf2f7; border: 1px solid #cbd5e0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: 0.2s;">
-                            📍 ${addr}
-                        </button>
-                    `;
+            <button onclick="selectSavedAddress('${addr}')" style="background: #edf2f7; border: 1px solid #cbd5e0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: 0.2s;">
+                📍 ${addr}
+            </button>
+          `;
         });
         container.innerHTML = buttonsHtml;
       }
+    } else if (savedAddressesBlock) {
+      savedAddressesBlock.classList.add("hidden");
     }
   } else {
     authHeader.innerHTML = `
-            <button onclick="simulateLogin()" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
-                Увійти (Демо)
-            </button>
-        `;
+      <button onclick="window.location.href='login.html'" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+          Увійти
+      </button>
+      <button onclick="window.location.href='register.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+          Реєстрація
+      </button>
+    `;
     if (savedAddressesBlock) savedAddressesBlock.classList.add("hidden");
   }
 }
 
-// --- ЛОГІКА КАТАЛОГУ ТА МЕНЮ СТРАВ (catalog.html) ---
+function logout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  sessionStorage.clear();
+  if (window.location.pathname.includes("catalog.html")) {
+    window.location.href = "index.html";
+  } else {
+    renderAuthHeader();
+  }
+}
 
-function initCatalog() {
+function configureOrderForm() {
+  const user = getAuthUser();
+  const fieldsWrapper = document.getElementById("order-user-fields");
+  const noteElement = document.getElementById("order-user-note");
+  const nameInput = document.getElementById("client-name");
+  const phoneInput = document.getElementById("client-phone");
+
+  if (!fieldsWrapper || !noteElement || !nameInput || !phoneInput) return;
+
+  if (user) {
+    fieldsWrapper.style.display = "none";
+    nameInput.disabled = true;
+    phoneInput.disabled = true;
+
+    noteElement.style.display = "block";
+    noteElement.innerText = `Ім'я: ${user.name}, Телефон: ${user.phone}. Ці дані будуть використані для оформлення замовлення.`;
+  } else {
+    fieldsWrapper.style.display = "block";
+    nameInput.disabled = false;
+    phoneInput.disabled = false;
+
+    noteElement.style.display = "none";
+    noteElement.innerText = "";
+  }
+}
+
+async function loginUser(event) {
+  event.preventDefault();
+  const errorElement = document.getElementById("login-error");
+  if (errorElement) errorElement.innerText = "";
+
+  const email = document.getElementById("login-email")?.value || "";
+  const password = document.getElementById("login-password")?.value || "";
+
+  if (!email.trim() || !password.trim()) {
+    if (errorElement) errorElement.innerText = "Будь ласка, введіть email та пароль.";
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:3000/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Неправильний email або пароль");
+    }
+
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    window.location.href = "catalog.html";
+  } catch (error) {
+    if (errorElement) errorElement.innerText = error.message || "Помилка під час входу";
+  }
+}
+
+async function registerUser(event) {
+  event.preventDefault();
+  const errorElement = document.getElementById("register-error");
+  const successElement = document.getElementById("register-success");
+  if (errorElement) errorElement.innerText = "";
+  if (successElement) successElement.innerText = "";
+
+  const name = document.getElementById("register-name")?.value || "";
+  const email = document.getElementById("register-email")?.value || "";
+  const phone = document.getElementById("register-phone")?.value || "";
+  const password = document.getElementById("register-password")?.value || "";
+
+  if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+    if (errorElement) errorElement.innerText = "Усі поля є обов'язковими для заповнення.";
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:3000/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, phone, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Помилка під час реєстрації");
+    }
+
+    if (successElement) {
+      successElement.innerText = "Реєстрація пройшла успішно. Тепер можете увійти.";
+    }
+  } catch (error) {
+    if (errorElement) errorElement.innerText = error.message || "Помилка під час реєстрації";
+  }
+}
+
+function redirectIfAuthenticatedForAuthPages() {
+  if (isAuthenticated()) {
+    window.location.href = "catalog.html";
+  }
+}
+
+// --- ЛОГІКА КАТАЛОГУ ТА МЕНЮ СТРАВ (catalog.html) ---
+async function fetchRestaurants() {
+  try {
+    const response = await fetch("http://localhost:3000/restaurants");
+    if (!response.ok) {
+      throw new Error("Помилка завантаження даних із сервера");
+    }
+    const restaurants = await response.json();
+    renderRestaurants(restaurants);
+  } catch (error) {
+    console.error("Не вдалося завантажити ресторани:", error);
+  }
+}
+
+function renderRestaurants(restaurantsList) {
   currentRestaurantId = null;
   currentRestaurantName = "";
-  isMobileCartOpen = false;
   savePageState();
 
   const mainContent = document.getElementById("main-content");
   if (!mainContent) return;
 
-  if (document.getElementById("cart-sidebar"))
-    document.getElementById("cart-sidebar").classList.add("hidden");
-  if (document.getElementById("mobile-cart-bar"))
-    document.getElementById("mobile-cart-bar").classList.add("hidden");
+  const cartSidebar = document.getElementById("cart-sidebar");
+  if (cartSidebar) cartSidebar.classList.add("hidden");
 
   let html = `<h1>Оберіть заклад у Полтаві</h1><div class="restaurant-grid">`;
-  restaurants.forEach((res) => {
+
+  restaurantsList.forEach((res) => {
     html += `
-            <div class="restaurant-card" onclick="loadRestaurantMenu(${res.id}, '${res.name}', true)">
-                <img src="${res.img}" alt="${res.name}">
-                <h3>${res.name}</h3>
-                <p>${res.desc}</p>
-            </div>
-        `;
+      <div class="restaurant-card" onclick="loadRestaurantMenuFromAPI(${res.id}, '${res.name}')">
+          <img src="${res.image}" alt="${res.name}">
+          <h3>${res.name}</h3>
+          <p>${res.description}</p>
+      </div>
+    `;
   });
   html += `</div>`;
   mainContent.innerHTML = html;
 }
 
-function loadRestaurantMenu(
+function initCatalog() {
+  fetchRestaurants();
+}
+
+async function loadRestaurantMenuFromAPI(
   restaurantId,
   restaurantName,
-  shouldResetCart = false,
+  shouldResetCart = true,
 ) {
   currentRestaurantId = restaurantId;
   currentRestaurantName = restaurantName;
 
   if (shouldResetCart) {
-    cart = []; // Очищаємо кошик ТІЛЬКИ якщо перейшли на новий ресторан з каталогу вручну
+    cart = [];
   }
   savePageState();
 
   const mainContent = document.getElementById("main-content");
   if (!mainContent) return;
 
-  if (document.getElementById("cart-sidebar"))
-    document.getElementById("cart-sidebar").classList.remove("hidden");
+  const cartSidebar = document.getElementById("cart-sidebar");
+  if (cartSidebar) cartSidebar.classList.remove("hidden");
 
-  let html = `
-        <button onclick="initCatalog()" class="btn-back">⬅ Назад до закладів</button>
-        <h1>${restaurantName}</h1>
-        <div class="dishes-list">
+  try {
+    const response = await fetch(
+      `http://localhost:3000/restaurants/${restaurantId}`,
+    );
+    const restaurant = await response.json();
+
+    let html = `
+      <button onclick="initCatalog()" class="btn-back">⬅ Назад до закладів</button>
+      <h1>${restaurant.name}</h1>
+      <div class="dishes-list">
     `;
 
-  const menuItems = dishes[restaurantId] || [];
-  menuItems.forEach((dish) => {
-    html += `
-            <div class="dish-item-card">
-                <img src="${dish.img}" alt="${dish.name}">
-                <div class="dish-info">
-                    <h3>${dish.name}</h3>
-                    <p>${dish.desc}</p>
-                    <strong>${dish.price} грн</strong>
-                </div>
-                <button onclick="addToCart('${dish.id}', '${dish.name}', ${dish.price}, '${dish.img}')">Додати</button>
+    const menuItems = restaurant.dishes || [];
+
+    menuItems.forEach((dish) => {
+      html += `
+        <div class="dish-item-card">
+            <img src="${dish.image}" alt="${dish.name}">
+            <div class="dish-info">
+                <h3>${dish.name}</h3>
+                <p>${dish.description}</p>
+                <strong>${dish.price} грн</strong>
             </div>
-        `;
-  });
-  html += `</div>`;
-  mainContent.innerHTML = html;
+            <button onclick="addToCart('${dish.id}', '${dish.name}', ${dish.price}, '${dish.image}')">Додати</button>
+        </div>
+      `;
+    });
+    html += `</div>`;
+    mainContent.innerHTML = html;
 
-  updateCartUI();
-
-  // Якщо на мобільному кошик мав бути відкритим — відновлюємо його розгорнутий стан
-  if (isMobileCartOpen && window.innerWidth <= 900) {
-    toggleMobileCart(true);
+    updateCartUI();
+  } catch (error) {
+    console.error("Не вдалося завантажити меню закладу:", error);
+    mainContent.innerHTML = `<p style="color: red; padding: 20px;">Помилка завантаження меню ресторану.</p>`;
   }
 }
 
-// --- КЕРУВАННЯ КОШИКОМ ---
+function loadRestaurantMenu(restaurantId, restaurantName, shouldResetCart) {
+  loadRestaurantMenuFromAPI(restaurantId, restaurantName, shouldResetCart);
+}
 
-function addToCart(id, name, price, img) {
+// --- КЕРУВАННЯ КОШИКОМ ---
+function addToCart(id, name, price, image) {
   const existingItem = cart.find((item) => item.id === id);
   if (existingItem) {
     existingItem.quantity += 1;
   } else {
-    cart.push({ id, name, price, img, quantity: 1 });
+    cart.push({
+      id: id,
+      name: name,
+      price: Number(price),
+      image: image,
+      quantity: 1,
+    });
   }
   updateCartUI();
 }
@@ -312,25 +404,32 @@ function updateCartUI() {
 
   const cartItemsDiv = document.getElementById("cart-items");
   const totalSpan = document.getElementById("total-amount");
+  const cartSidebar = document.getElementById("cart-sidebar");
   const mobileBar = document.getElementById("mobile-cart-bar");
   const mobileCountSpan = document.getElementById("mobile-cart-count");
   const mobileTotalSpan = document.getElementById("mobile-cart-total");
 
   if (!cartItemsDiv) return;
 
+  const isMobile = window.innerWidth <= 900;
+
+  // Стан 1: КОШИК ПОРОЖНІЙ
   if (cart.length === 0) {
-    cartItemsDiv.innerHTML = '<p class="empty-cart">Кошик порожній</p>';
+    cartItemsDiv.innerHTML =
+      '<p class="empty-cart" style="text-align: center; color: #a0aec0; padding: 20px 0;">🛒 Кошик порожній</p>';
     if (totalSpan) totalSpan.innerText = "0";
 
     if (mobileBar) mobileBar.classList.add("hidden");
-    if (window.innerWidth <= 900 && document.getElementById("cart-sidebar")) {
-      document.getElementById("cart-sidebar").classList.add("hidden");
+
+    // Ховаємо весь кошик при 0 страв ТІЛЬКИ на мобільних
+    if (isMobile && cartSidebar) {
+      cartSidebar.classList.add("hidden");
       isMobileCartOpen = false;
-      savePageState();
     }
     return;
   }
 
+  // Стан 2: У КОШИКУ Є СТРАВИ
   let html = '<div class="cart-items-list">';
   let totalAmount = 0;
   let totalItemsCount = 0;
@@ -341,50 +440,42 @@ function updateCartUI() {
     totalItemsCount += item.quantity;
 
     html += `
-            <div class="cart-item-row">
-                <img src="${item.img}" alt="${item.name}">
-                <div class="cart-item-details">
-                    <h4>${item.name}</h4>
-                    <p>${item.price} грн</p>
-                </div>
-                <div class="quantity-controls">
-                    <button onclick="changeQuantity('${item.id}', -1)">−</button>
-                    <span>${item.quantity}</span>
-                    <button onclick="changeQuantity('${item.id}', 1)">+</button>
-                </div>
-            </div>
-        `;
+      <div class="cart-item-row" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #edf2f7;">
+          <img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; margin-right: 10px;">
+          <div class="cart-item-details" style="flex: 1;">
+              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">${item.name}</h4>
+              <p style="margin: 3px 0 0 0; color: #718096; font-size: 0.85rem;">${item.price} грн</p>
+          </div>
+          <div class="quantity-controls" style="display: flex; align-items: center; gap: 8px;">
+              <button onclick="changeQuantity('${item.id}', -1)" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">−</button>
+              <span style="font-weight: 600; min-width: 15px; text-align: center;">${item.quantity}</span>
+              <button onclick="changeQuantity('${item.id}', 1)" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #edf2f7; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">+</button>
+          </div>
+      </div>
+    `;
   });
   html += "</div>";
 
   cartItemsDiv.innerHTML = html;
   if (totalSpan) totalSpan.innerText = totalAmount;
 
-  // Керування мобільними плашками
-  if (window.innerWidth <= 900 && !isMobileCartOpen && mobileBar) {
-    mobileBar.classList.remove("hidden");
-  }
-  if (mobileCountSpan) mobileCountSpan.innerText = totalItemsCount;
-  if (mobileTotalSpan) mobileTotalSpan.innerText = totalAmount + " грн";
-}
-
-function toggleMobileCart(open) {
-  isMobileCartOpen = open;
-  savePageState();
-
-  const cartSidebar = document.getElementById("cart-sidebar");
-  const mobileBar = document.getElementById("mobile-cart-bar");
-
-  if (!cartSidebar) return;
-
-  if (open) {
-    cartSidebar.classList.remove("hidden");
-    if (mobileBar) mobileBar.classList.add("hidden");
-  } else {
-    cartSidebar.classList.add("hidden");
-    if (cart.length > 0 && mobileBar) {
-      mobileBar.classList.remove("hidden");
+  // Логіка перемикання відображення (Мобільна версія vs Комп'ютерна)
+  if (isMobile) {
+    if (isMobileCartOpen) {
+      if (cartSidebar) cartSidebar.classList.remove("hidden");
+      if (mobileBar) mobileBar.classList.add("hidden");
+    } else {
+      if (cartSidebar) cartSidebar.classList.add("hidden");
+      if (mobileBar) mobileBar.classList.remove("hidden");
     }
+    if (mobileCountSpan) mobileCountSpan.innerText = totalItemsCount;
+    if (mobileTotalSpan) mobileTotalSpan.innerText = totalAmount + " грн";
+  } else {
+    // На десктопі фіксований кошик завжди видимий, якщо ми всередині меню
+    if (currentRestaurantId && cartSidebar) {
+      cartSidebar.classList.remove("hidden");
+    }
+    if (mobileBar) mobileBar.classList.add("hidden");
   }
 }
 
@@ -392,13 +483,19 @@ function submitOrder(event) {
   event.preventDefault();
   if (cart.length === 0) return;
 
+  const user = getAuthUser();
   const orderData = {
-    clientName: document.getElementById("client-name").value,
-    clientPhone: document.getElementById("client-phone").value,
+    clientName: user ? user.name : document.getElementById("client-name").value,
+    clientPhone: user ? user.phone : document.getElementById("client-phone").value,
     address: localStorage.getItem("userAddress"),
     items: cart,
     total: document.getElementById("total-amount").innerText,
   };
+
+  if (!orderData.clientName || !orderData.clientPhone) {
+    alert("Будь ласка, заповніть своє ім'я та телефон для оформлення замовлення.");
+    return;
+  }
 
   console.log("Дані замовлення відправлено:", orderData);
   alert(
@@ -406,31 +503,8 @@ function submitOrder(event) {
   );
 
   cart = [];
-  isMobileCartOpen = false;
   initCatalog();
 }
-
-// --- ЛОГІКА ПАНЕЛІ АДМІНІСТРАТОРА (admin.html) ---
-let mockOrders = [
-  {
-    id: 101,
-    name: "Олексій",
-    phone: "+380501112233",
-    address: "м. Полтава, вул. Небесної Сотні, 15",
-    items: "Піца Капрічоза (1)",
-    total: 190,
-    status: "Прийнято",
-  },
-  {
-    id: 102,
-    name: "Марія",
-    phone: "+380669998877",
-    address: "м. Полтава, вул. Котляревського, 4",
-    items: "Бургер Класичний (2), Картопля Фрі (1)",
-    total: 340,
-    status: "Готується",
-  },
-];
 
 function initAdminPanel() {
   const tableBody = document.getElementById("admin-orders-table");
@@ -444,25 +518,48 @@ function initAdminPanel() {
     if (order.status === "Доставлено") statusClass = "status-done";
 
     html += `
-            <tr>
-                <td><strong>#${order.id}</strong></td>
-                <td>${order.name}</td>
-                <td>${order.phone}</td>
-                <td>${order.address}</td>
-                <td>${order.items}</td>
-                <td><strong>${order.total} грн</strong></td>
-                <td>
-                    <select onchange="changeOrderStatus(${order.id}, this.value)" class="status-select ${statusClass}">
-                        <option value="Прийнято" ${order.status === "Прийнято" ? "selected" : ""}>New: Прийнято</option>
-                        <option value="Готується" ${order.status === "Готується" ? "selected" : ""}>In Process: Готується</option>
-                        <option value="Доставлено" ${order.status === "Доставлено" ? "selected" : ""}>Done: Доставлено</option>
-                    </select>
-                </td>
-            </tr>
-        `;
+      <tr>
+          <td><strong>#${order.id}</strong></td>
+          <td>${order.name}</td>
+          <td>${order.phone}</td>
+          <td>${order.address}</td>
+          <td>${order.items}</td>
+          <td><strong>${order.total} грн</strong></td>
+          <td>
+              <select onchange="changeOrderStatus(${order.id}, this.value)" class="status-select ${statusClass}">
+                  <option value="Прийнято" ${order.status === "Прийнято" ? "selected" : ""}>New: Прийнято</option>
+                  <option value="Готується" ${order.status === "Готується" ? "selected" : ""}>In Process: Готується</option>
+                  <option value="Доставлено" ${order.status === "Доставлено" ? "selected" : ""}>Done: Доставлено</option>
+              </select>
+          </td>
+      </tr>
+    `;
   });
   tableBody.innerHTML = html;
 }
+
+function toggleMobileCart(open) {
+  isMobileCartOpen = open;
+  savePageState();
+  updateCartUI();
+}
+// Автоматично виправляємо відображення кошика при зміні розміру екрана
+window.addEventListener("resize", () => {
+  const isMobile = window.innerWidth <= 900;
+  const cartSidebar = document.getElementById("cart-sidebar");
+
+  if (!isMobile) {
+    // Якщо користувач розтягнув екран до десктопного розміру:
+    // Повертаємо кошик у видимий стан, якщо ми перебуваємо всередині якогось ресторану
+    if (currentRestaurantId && cartSidebar) {
+      cartSidebar.classList.remove("hidden");
+    }
+  } else {
+    // Якщо екран звузили до мобільного:
+    // Синхронізуємо видимість відповідно до стану мобільного прапорця
+    updateCartUI();
+  }
+});
 
 function changeOrderStatus(orderId, newStatus) {
   const order = mockOrders.find((o) => o.id === orderId);
