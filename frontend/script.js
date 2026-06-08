@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (path.includes("index.html") || path.endsWith("/")) {
     renderAuthHeader();
+    renderSavedAddressesOnWelcome();
   } else if (path.includes("catalog.html")) {
     restorePageState();
     configureOrderForm();
@@ -121,12 +122,68 @@ function updateDisplayAddress() {
 }
 
 // --- ЛОГІКА СТОРІНКИ ПРИВІТАННЯ (index.html) ---
+const MAX_SAVED_ADDRESSES = 5;
+const SAVED_ADDRESSES_KEY = "savedAddresses";
+
+function getSavedAddresses() {
+  try {
+    const raw = localStorage.getItem(SAVED_ADDRESSES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSavedAddresses(addresses) {
+  localStorage.setItem(SAVED_ADDRESSES_KEY, JSON.stringify(addresses));
+}
+
+function addSavedAddress(address) {
+  const trimmed = address.trim();
+  if (!trimmed) return;
+
+  const addresses = getSavedAddresses().filter(
+    (item) => item.toLowerCase() !== trimmed.toLowerCase(),
+  );
+  addresses.unshift(trimmed);
+  saveSavedAddresses(addresses.slice(0, MAX_SAVED_ADDRESSES));
+}
+
+function renderSavedAddressesOnWelcome() {
+  const addresses = getSavedAddresses();
+  const savedAddressesBlock = document.getElementById("saved-addresses-block");
+  const container = document.getElementById("addresses-buttons-container");
+
+  if (!savedAddressesBlock || !container) return;
+
+  if (addresses.length === 0) {
+    savedAddressesBlock.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+
+  savedAddressesBlock.classList.remove("hidden");
+  container.innerHTML = addresses
+    .map(
+      (addr) =>
+        `<button onclick="selectSavedAddress(${JSON.stringify(
+          addr,
+        )})" style="background: #edf2f7; border: 1px solid #cbd5e0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: 0.2s;">
+              📍 ${addr}
+          </button>`,
+    )
+    .join("");
+}
+
 function saveAddressAndGo() {
   const addressInput = document.getElementById("user-address").value;
   if (!addressInput.trim()) {
     alert("Будь ласка, введіть адресу!");
     return;
   }
+  addSavedAddress(addressInput);
   localStorage.setItem("userAddress", addressInput);
   sessionStorage.removeItem("currentRestaurantId");
   window.location.href = "catalog.html";
@@ -930,6 +987,7 @@ async function initAdminPanel() {
       html += `
         <tr>
           <td><strong>#${order.id}</strong></td>
+          <td>${order.restaurant || "-"}</td>
           <td>${order.clientName}</td>
           <td>${order.clientPhone}</td>
           <td>${order.address || "-"}</td>

@@ -34,6 +34,7 @@ export class OrdersController {
 
     return orders.map((order) => ({
       id: order.id,
+      restaurant: order.restaurant?.name || '-',
       clientName: order.user?.name || order.guestName || 'Гість',
       clientPhone: order.user?.phone || order.guestPhone || '-',
       address: order.address,
