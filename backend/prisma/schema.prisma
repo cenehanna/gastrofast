@@ -7,93 +7,63 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 1. Таблиця Користувачів
 model User {
   id             Int      @id @default(autoincrement())
   email          String   @unique
   passwordHash   String
   name           String
   phone          String
-  role           String   @default("CLIENT") // CLIENT або ADMIN
-  savedAddresses String[] // Масив збережених адрес
+  role           String   @default("CLIENT")
+  savedAddresses String[]
   createdAt      DateTime @default(now())
-  
-  // Зв'язок: один користувач може мати багато замовлень
   orders         Order[]
 }
 
-// 2. Таблиця Ресторанів
 model Restaurant {
   id          Int      @id @default(autoincrement())
   name        String
   description String
-  image       String   // Посилання на фото закладу
-  
-  // Зв'язок: у ресторані є багато страв
+  image       String
   dishes      Dish[]
-  // Зв'язок: ресторан пов'язаний із замовленнями
   orders      Order[]
 }
 
-// 3. Таблиця Страви
 model Dish {
-  id           Int         @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   name         String
   description  String
   price        Float
-  image        String      // Посилання на фото страви
-  
-  // Зв'язок з Рестораном
+  image        String
   restaurantId Int
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-
-  // Зв'язок: одна страва може фігурувати у багатьох замовленнях через проміжну таблицю
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orderItems   OrderItem[]
 }
 
-// 4. Таблиця Замовлень
 model Order {
-  id           Int         @id @default(autoincrement())
-  address      String
-  total        Float
-  status       String      @default("PLACED") // PLACED, COOKING, DONE, DELIVERED
-  createdAt    DateTime    @default(now())
-
-  // --- ЛОГІКА ІДЕНТИФІКАЦІЇ КОРИСТУВАЧА / ГОСТЯ ---
-  
-  // Зв'язок з Користувачем (Опціональний, якщо замовляє зареєстрований клієнт)
-  userId       Int?
-  user         User?       @relation(fields: [userId], references: [id])
-
-  // Контактні дані для Гостей (Заповнюються обов'язково, якщо userId === null)
-  guestName    String?
-  guestPhone   String?
-  guestEmail   String?
-
-  // Безпечний унікальний токен для відстеження замовлення гостями (UUID)
+  id            Int        @id @default(autoincrement())
+  address       String
+  total         Float
+  status        String     @default("PLACED")
+  createdAt     DateTime   @default(now())
+  userId        Int?
+  user          User?      @relation(fields: [userId], references: [id])
+  guestName     String?
+  guestPhone    String?
+  guestEmail    String?
   trackingToken String     @unique @default(uuid())
-
-  // --- АРХІТЕКТУРНІ ЗВ'ЯЗКИ ---
-
-  // Зв'язок з Рестораном (Обов'язково, щоб адмін конкретного закладу бачив свої замовлення)
-  restaurantId Int
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
-
-  // Справжній зв'язок зі стравами через проміжну таблицю
-  items        OrderItem[]
+  restaurantId  Int
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+  items         OrderItem[]
 }
 
-
-
-// 5. Проміжна таблиця для страв у замовленні (Нова)
 model OrderItem {
-  id        Int   @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   orderId   Int
-  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   dishId    Int
-  dish      Dish  @relation(fields: [dishId], references: [id])
-  
-  quantity  Int   // Кількість порцій цієї страви в замовленні
-  price     Float // Фіксуємо ціну на момент замовлення (якщо ресторан змінить ціну на страву завтра, в історії замовлення вона має залишитися старою)
+  dish      Dish   @relation(fields: [dishId], references: [id])
+  quantity  Int
+  price     Float
+  dishName  String
+  dishImage String
 }

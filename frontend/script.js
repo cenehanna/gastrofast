@@ -109,6 +109,44 @@ function getAuthToken() {
   return localStorage.getItem("token");
 }
 
+function translateOrderStatus(status) {
+  switch (status) {
+    case "PENDING":
+      return "В обробці";
+    case "PLACED":
+      return "Прийнято";
+    case "COOKING":
+      return "Готується";
+    case "DELIVERED":
+      return "Доставляється";
+    case "DONE":
+      return "Виконано";
+    case "CANCELLED":
+      return "Скасовано";
+    default:
+      return status || "В обробці";
+  }
+}
+
+function getStatusClass(status) {
+  switch (status) {
+    case "PENDING":
+      return "status-placed";
+    case "PLACED":
+      return "status-confirmed";
+    case "COOKING":
+      return "status-cooking";
+    case "DELIVERED":
+      return "status-delivering";
+    case "DONE":
+      return "status-done";
+    case "CANCELLED":
+      return "status-cancelled";
+    default:
+      return "status-placed";
+  }
+}
+
 function isAuthenticated() {
   return !!getAuthToken();
 }
@@ -532,41 +570,38 @@ async function submitOrder(event) {
   }
 
   const user = getAuthUser();
-  let clientName, clientPhone;
+  const isGuest = !user;
 
-  if (user && user.name) {
-    clientName = user.name;
-    clientPhone =
-      user.phone || document.getElementById("client-phone")?.value || "";
+  // Отримуємо контактні дані
+  let guestName, guestPhone, clientName, clientPhone;
+
+  if (isGuest) {
+    guestName = document.getElementById("client-name")?.value || "";
+    guestPhone = document.getElementById("client-phone")?.value || "";
+
+    if (!guestName || !guestPhone) {
+      alert(
+        "Будь ласка, заповніть своє ім'я та телефон для оформлення замовлення.",
+      );
+      return;
+    }
   } else {
-    clientName = document.getElementById("client-name")?.value || "";
-    clientPhone = document.getElementById("client-phone")?.value || "";
-  }
-
-  if (!clientName || !clientPhone) {
-    alert(
-      "Будь ласка, заповніть своє ім'я та телефон для оформлення замовлення.",
-    );
-    return;
+    clientName = user.name;
+    clientPhone = user.phone || "";
   }
 
   const totalAmount = document.getElementById("total-amount")?.innerText || "0";
 
+  // Формуємо дані для бекенду
   const orderData = {
-    clientName: clientName,
-    clientPhone: clientPhone,
     address: localStorage.getItem("userAddress") || "",
-    total: parseFloat(totalAmount),
-    itemsJson: JSON.stringify(
-      cart.map((item) => ({
-        id: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        image: item.image,
-      })),
-    ),
-    userId: user?.id || null,
+    restaurantId: currentRestaurantId,
+    items: cart.map((item) => ({
+      dishId: parseInt(item.id), // id страви - це число в БД
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    ...(isGuest ? { guestName, guestPhone, guestEmail: "" } : {}),
   };
 
   try {
@@ -587,21 +622,16 @@ async function submitOrder(event) {
 
     const result = await response.json();
 
-    // ЛОГІКА ПЕРЕНАПРАВЛЕННЯ:
-    if (user) {
-      // Авторизований користувач - на сторінку історії замовлень
+    if (!isGuest) {
       alert(
-        `✅ Дякуємо, ${clientName}! Замовлення #${result.id} оформлено на суму ${totalAmount} грн.`,
+        `✅ Дякуємо, ${user.name}! Замовлення #${result.id} оформлено на суму ${result.total} грн.`,
       );
       window.location.href = "orders.html";
     } else {
-      // Гість - на сторінку відстеження з токеном
-      const trackingToken = result.trackingToken || result.id;
-      alert(`✅ Дякуємо, ${clientName}! Замовлення оформлено.`);
-      window.location.href = `track.html?token=${trackingToken}`;
+      alert(`✅ Дякуємо, ${guestName}! Замовлення оформлено.`);
+      window.location.href = `track.html?token=${result.trackingToken}`;
     }
 
-    // Очищуємо кошик
     cart = [];
     isMobileCartOpen = false;
     updateCartUI();
@@ -614,28 +644,40 @@ async function submitOrder(event) {
 // Отримання тільки МОЇХ замовлень (для авторизованого користувача)
 async function fetchMyOrders() {
   const token = getAuthToken();
-  
+
+  console.log("Токен для запиту:", token ? "Є токен" : "Немає токена");
+
   if (!token) {
+    console.warn("Немає токена авторизації");
     return [];
   }
-  
+
   try {
     const response = await fetch("http://localhost:3000/orders/my", {
+      method: "GET",
       headers: {
-        "Authorization": `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     });
-    
+
+    console.log("Статус відповіді:", response.status);
+
     if (!response.ok) {
-      throw new Error("Помилка завантаження замовлень");
+      const errorText = await response.text();
+      console.error("Помилка відповіді:", errorText);
+      throw new Error(`Помилка ${response.status}: ${errorText}`);
     }
-    
-    return await response.json();
+
+    const orders = await response.json();
+    console.log("Отримано замовлень:", orders.length);
+    return orders;
   } catch (error) {
     console.error("Помилка завантаження замовлень:", error);
     return [];
   }
 }
+
 
 /* function getStoredOrders() {
   const ordersJson = localStorage.getItem("userOrders");
@@ -706,8 +748,45 @@ async function initOrdersPage() {
     return;
   }
 
+  // Перевіряємо чи є токен
+  const token = getAuthToken();
+  if (!token) {
+    console.error("Немає токена!");
+    emptyMessage.style.display = "block";
+    emptyMessage.innerHTML = "❌ Помилка авторизації. Увійдіть знову.";
+    ordersTable.innerHTML = "";
+    return;
+  }
+
   try {
-    const orders = await fetchMyOrders();
+    console.log("Завантаження замовлень для користувача:", user.id);
+    console.log("Токен:", token.substring(0, 20) + "...");
+
+    const response = await fetch("http://localhost:3000/orders/my", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    console.log("Статус відповіді:", response.status);
+
+    if (response.status === 401) {
+      // Токен недійсний - очищаємо і перенаправляємо на логін
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      alert("Сесія закінчилась. Увійдіть знову.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Помилка ${response.status}`);
+    }
+
+    const orders = await response.json();
+    console.log("Отримано замовлень:", orders.length);
 
     if (!orders || orders.length === 0) {
       emptyMessage.style.display = "block";
@@ -722,22 +801,17 @@ async function initOrdersPage() {
 
     orders.forEach((order) => {
       let statusClass = "";
-      let statusText = order.status || "Прийнято";
+      let statusText = "";
 
-      if (statusText === "Прийнято") statusClass = "status-placed";
-      else if (statusText === "Готується") statusClass = "status-cooking";
-      else if (statusText === "Доставлено") statusClass = "status-done";
+      statusText = translateOrderStatus(order.status);
+      statusClass = getStatusClass(order.status);
 
       let itemSummary = "";
-      try {
-        const items =
-          typeof order.itemsJson === "string"
-            ? JSON.parse(order.itemsJson)
-            : order.itemsJson;
-        itemSummary = items
+      if (order.items && order.items.length > 0) {
+        itemSummary = order.items
           .map((item) => `${item.name} x${item.quantity}`)
           .join(", ");
-      } catch (e) {
+      } else {
         itemSummary = "-";
       }
 
@@ -745,7 +819,7 @@ async function initOrdersPage() {
 
       html += `
         <tr class="${statusClass}">
-          <td>#${order.id}</td>
+          <td><strong>#${order.id}</strong></td>
           <td>${orderDate}</td>
           <td>${order.clientName}</td>
           <td>${order.clientPhone}</td>
@@ -759,10 +833,13 @@ async function initOrdersPage() {
 
     ordersTable.innerHTML = html;
   } catch (error) {
-    console.error("Помилка:", error);
+    console.error("Помилка детально:", error);
     emptyMessage.style.display = "block";
-    emptyMessage.innerHTML =
-      "❌ Помилка завантаження замовлень. Спробуйте пізніше.";
+    emptyMessage.innerHTML = `❌ Помилка завантаження замовлень: ${error.message}<br><br>
+      <button onclick="initOrdersPage()" style="background: #ff5722; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+        Спробувати ще раз
+      </button>
+    `;
     ordersTable.innerHTML = "";
   }
 }
@@ -795,18 +872,17 @@ async function initAdminPanel() {
     let html = "";
     for (const order of orders) {
       let statusClass = "";
-      const statusText = order.status || "Прийнято";
-      
-      if (statusText === "Прийнято") statusClass = "status-placed";
-      else if (statusText === "Готується") statusClass = "status-cooking";
-      else if (statusText === "Доставлено") statusClass = "status-done";
+      const statusText = translateOrderStatus(order.status);
+      statusClass = getStatusClass(order.status);
 
-      // Парсимо itemsJson
       let itemSummary = "";
-      try {
-        const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
-        itemSummary = items.map(item => `${item.name} x${item.quantity}`).join(", ");
-      } catch(e) {
+      const rawItems =
+        order.items ||
+        (typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson) ||
+        [];
+      if (Array.isArray(rawItems) && rawItems.length > 0) {
+        itemSummary = rawItems.map(item => `${item.name} x${item.quantity}`).join(", ");
+      } else {
         itemSummary = "-";
       }
 
@@ -820,9 +896,12 @@ async function initAdminPanel() {
           <td><strong>${order.total} грн</strong></td>
           <td>
             <select onchange="changeOrderStatus(${order.id}, this.value)" class="status-select ${statusClass}">
-              <option value="Прийнято" ${statusText === "Прийнято" ? "selected" : ""}>📋 Прийнято</option>
-              <option value="Готується" ${statusText === "Готується" ? "selected" : ""}>🍳 Готується</option>
-              <option value="Доставлено" ${statusText === "Доставлено" ? "selected" : ""}>✅ Доставлено</option>
+              <option value="PENDING" ${order.status === "PENDING" ? "selected" : ""}>⏳ В обробці</option>
+              <option value="PLACED" ${order.status === "PLACED" ? "selected" : ""}>📋 Прийнято</option>
+              <option value="COOKING" ${order.status === "COOKING" ? "selected" : ""}>🍳 Готується</option>
+              <option value="DELIVERED" ${order.status === "DELIVERED" ? "selected" : ""}>🚚 Доставляється</option>
+              <option value="DONE" ${order.status === "DONE" ? "selected" : ""}>✅ Виконано</option>
+              <option value="CANCELLED" ${order.status === "CANCELLED" ? "selected" : ""}>❌ Скасовано</option>
             </select>
           </td>
         </tr>
@@ -873,7 +952,9 @@ async function changeOrderStatus(orderId, newStatus) {
     });
 
     if (!response.ok) {
-      throw new Error("Помилка оновлення статусу");
+      const errorText = await response.text();
+      console.error("Order status update failed:", response.status, errorText);
+      throw new Error(`Помилка оновлення статусу (${response.status})`);
     }
 
     // Оновлюємо відображення

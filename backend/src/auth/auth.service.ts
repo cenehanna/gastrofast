@@ -51,6 +51,8 @@ export class AuthService {
       sub: newUser.id,
       email: newUser.email,
       role: newUser.role,
+      name: newUser.name,
+      phone: newUser.phone,
     };
 
     return {
@@ -91,6 +93,8 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      name: user.name,
+      phone: user.phone,
     };
 
     // 4. Генеруємо токен та повертаємо його разом із базовими даними користувача

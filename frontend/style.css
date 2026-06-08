@@ -608,6 +608,18 @@ hr {
   background: #f16b1d;
   color: white;
 }
+.status-delivering {
+  background: #42a5f5;
+  color: white;
+}
+.status-done {
+  background: #1fc34b;
+  color: white;
+}
+.status-cancelled {
+  background: #d32f2f;
+  color: white;
+}
 .status-cooking {
   background: #ffaf2d;
   color: white;

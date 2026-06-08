@@ -18,6 +18,7 @@
             padding: 20px;
             border-radius: 10px;
             margin: 20px 0;
+            text-align: left;
         }
 
         .status-placed {
@@ -50,6 +51,12 @@
             font-size: 16px;
             margin-top: 20px;
         }
+
+        .info-row {
+            margin: 10px 0;
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 
@@ -73,84 +80,130 @@
         </div>
     </main>
 
-    <script>
-        async function trackOrder() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
+<script>
+    async function trackOrder() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
 
-            const orderInfo = document.getElementById('order-info');
+        const orderInfo = document.getElementById('order-info');
 
-            if (!token) {
-                orderInfo.innerHTML = `
-                    <div style="color: red; padding: 20px;">
-                        ❌ Токен замовлення не знайдено.<br>
-                        Будь ласка, перевірте посилання або зверніться до підтримки.
-                    </div>
-                `;
-                return;
-            }
-
-            try {
-                const response = await fetch(`http://localhost:3000/orders/track?token=${token}`);
-
-                if (!response.ok) {
-                    throw new Error('Замовлення не знайдено');
-                }
-
-                const order = await response.json();
-
-                let statusClass = '';
-                let statusText = order.status || 'Прийнято';
-                let statusEmoji = '📋';
-
-                if (statusText === 'Прийнято') {
-                    statusClass = 'status-placed';
-                    statusEmoji = '📋';
-                } else if (statusText === 'Готується') {
-                    statusClass = 'status-cooking';
-                    statusEmoji = '🍳';
-                } else if (statusText === 'Доставлено') {
-                    statusClass = 'status-done';
-                    statusEmoji = '✅';
-                }
-
-                let itemSummary = '';
-                try {
-                    const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
-                    itemSummary = items.map(item => `${item.name} x${item.quantity}`).join(', ');
-                } catch (e) {
-                    itemSummary = '-';
-                }
-
-                const orderDate = new Date(order.createdAt).toLocaleString('uk-UA');
-
-                orderInfo.innerHTML = `
-                    <div class="order-status ${statusClass}">
-                        <h2>${statusEmoji} ${statusText}</h2>
-                        <p><strong>Номер замовлення:</strong> #${order.id}</p>
-                        <p><strong>Дата:</strong> ${orderDate}</p>
-                        <p><strong>Страви:</strong> ${itemSummary}</p>
-                        <p><strong>Сума:</strong> ${order.total} грн</p>
-                        <p><strong>Адреса доставки:</strong> ${order.address || 'Не вказано'}</p>
-                        <hr>
-                        <p><strong>Контактна особа:</strong> ${order.clientName}</p>
-                        <p><strong>Телефон:</strong> ${order.clientPhone}</p>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('Помилка:', error);
-                orderInfo.innerHTML = `
-                    <div style="color: red; padding: 20px;">
-                        ❌ ${error.message}<br>
-                        Будь ласка, перевірте посилання або зверніться до підтримки.
-                    </div>
-                `;
-            }
+        if (!token) {
+            orderInfo.innerHTML = `
+      <div style="color: red; padding: 20px;">
+        ❌ Токен замовлення не знайдено.
+      </div>
+    `;
+            return;
         }
 
-        // Запускаємо при завантаженні
-        trackOrder();
-    </script>
+        try {
+            const response = await fetch(`http://localhost:3000/orders/track?token=${token}`);
+
+            if (!response.ok) {
+                throw new Error('Замовлення не знайдено');
+            }
+
+            const order = await response.json();
+
+            let statusClass = '';
+            let statusText = '';
+            let statusEmoji = '';
+
+            switch (order.status) {
+                case 'PENDING':
+                    statusText = 'В обробці';
+                    statusClass = 'status-placed';
+                    statusEmoji = '⏳';
+                    break;
+                case 'PLACED':
+                    statusText = 'Прийнято';
+                    statusClass = 'status-confirmed';
+                    statusEmoji = '📋';
+                    break;
+                case 'COOKING':
+                    statusText = 'Готується';
+                    statusClass = 'status-cooking';
+                    statusEmoji = '🍳';
+                    break;
+                case 'DELIVERED':
+                    statusText = 'Доставляється';
+                    statusClass = 'status-delivering';
+                    statusEmoji = '🚚';
+                    break;
+                case 'DONE':
+                    statusText = 'Виконано';
+                    statusClass = 'status-done';
+                    statusEmoji = '✅';
+                    break;
+                case 'CANCELLED':
+                    statusText = 'Скасовано';
+                    statusClass = 'status-cancelled';
+                    statusEmoji = '❌';
+                    break;
+                default:
+                    statusText = order.status || 'В обробці';
+                    statusClass = 'status-placed';
+                    statusEmoji = '⏳';
+            }
+
+            // Тепер тут будуть ПОВНІ НАЗВИ страв
+            let itemSummary = '';
+            if (order.items && order.items.length > 0) {
+                itemSummary = order.items.map(item => {
+                    return `${item.name} x${item.quantity} — ${item.price} грн`;
+                }).join('<br>');
+            } else {
+                itemSummary = '-';
+            }
+
+            const orderDate = new Date(order.createdAt).toLocaleString('uk-UA');
+
+            orderInfo.innerHTML = `
+      <div class="order-status ${statusClass}">
+        <h2 style="text-align: center;">${statusEmoji} ${statusText}</h2>
+        
+        <div class="info-row">
+          <strong>📋 Номер замовлення:</strong> #${order.id}
+        </div>
+        
+        <div class="info-row">
+          <strong>📅 Дата:</strong> ${orderDate}
+        </div>
+        
+        <div class="info-row">
+          <strong>🍽️ Страви:</strong><br>
+          ${itemSummary}
+        </div>
+        
+        <div class="info-row">
+          <strong>💰 Сума:</strong> ${order.total} грн
+        </div>
+        
+        <div class="info-row">
+          <strong>📍 Адреса доставки:</strong> ${order.address || 'Не вказано'}
+        </div>
+        
+        <div class="info-row">
+          <strong>👤 Контактна особа:</strong> ${order.clientName}
+        </div>
+        
+        <div class="info-row">
+          <strong>📞 Телефон:</strong> ${order.clientPhone}
+        </div>
+      </div>
+    `;
+        } catch (error) {
+            console.error('Помилка:', error);
+            orderInfo.innerHTML = `
+      <div style="color: red; padding: 20px;">
+        ❌ ${error.message}
+      </div>
+    `;
+        }
+    }
+
+    trackOrder();
+</script>
 </body>
 
 </html>
