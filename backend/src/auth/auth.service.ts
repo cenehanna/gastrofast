@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -7,7 +11,10 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   async register(dto: RegisterDto) {
     // 1. Перевіряємо, чи вже існує користувач з таким email
@@ -39,7 +46,24 @@ export class AuthService {
 
     // 4. Вирізаємо passwordHash з об'єкта відповіді, щоб випадково не віддати його на фронтенд
     const { passwordHash, ...userWithoutHash } = newUser;
-    return userWithoutHash;
+
+    const payload = {
+      sub: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: userWithoutHash.id,
+        email: userWithoutHash.email,
+        name: userWithoutHash.name,
+        phone: userWithoutHash.phone,
+        role: userWithoutHash.role,
+        savedAddresses: userWithoutHash.savedAddresses || [],
+      },
+    };
   }
 
   async login(dto: LoginDto) {
@@ -53,7 +77,10 @@ export class AuthService {
     }
 
     // 2. Порівнюємо введений пароль із захешованим у базі даних
-    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Неправильний email або пароль');
@@ -73,6 +100,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        phone: user.phone,
         role: user.role,
         savedAddresses: user.savedAddresses || [],
       },

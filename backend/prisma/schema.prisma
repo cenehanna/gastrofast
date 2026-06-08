@@ -53,25 +53,37 @@ model Dish {
 
 // 4. Таблиця Замовлень
 model Order {
-  id          Int      @id @default(autoincrement())
-  clientName  String
-  clientPhone String
-  address     String
-  total       Float
-  status      String   @default("PLACED") // PLACED, COOKING, DONE
-  createdAt   DateTime @default(now())
+  id           Int         @id @default(autoincrement())
+  address      String
+  total        Float
+  status       String      @default("PLACED") // PLACED, COOKING, DONE, DELIVERED
+  createdAt    DateTime    @default(now())
+
+  // --- ЛОГІКА ІДЕНТИФІКАЦІЇ КОРИСТУВАЧА / ГОСТЯ ---
+  
+  // Зв'язок з Користувачем (Опціональний, якщо замовляє зареєстрований клієнт)
+  userId       Int?
+  user         User?       @relation(fields: [userId], references: [id])
+
+  // Контактні дані для Гостей (Заповнюються обов'язково, якщо userId === null)
+  guestName    String?
+  guestPhone   String?
+  guestEmail   String?
+
+  // Безпечний унікальний токен для відстеження замовлення гостями (UUID)
+  trackingToken String     @unique @default(uuid())
+
+  // --- АРХІТЕКТУРНІ ЗВ'ЯЗКИ ---
 
   // Зв'язок з Рестораном (Обов'язково, щоб адмін конкретного закладу бачив свої замовлення)
   restaurantId Int
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
 
-  // Зв'язок з Користувачем (Опціональний, якщо замовляє гість без акаунту)
-  userId      Int?
-  user        User?    @relation(fields: [userId], references: [id])
-
-  // Справжній зв'язок зі стравами замість JSON
-  items       OrderItem[]
+  // Справжній зв'язок зі стравами через проміжну таблицю
+  items        OrderItem[]
 }
+
+
 
 // 5. Проміжна таблиця для страв у замовленні (Нова)
 model OrderItem {

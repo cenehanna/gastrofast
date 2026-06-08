@@ -12,7 +12,7 @@
     <header>
         <div class="header-container">
             <h2 onclick="window.location.href='index.html'" style="cursor:pointer;">🍕 GastroFast</h2>
-            <p>Адреса доставки: <span id="display-address" style="font-weight:bold; color:#ff5722;"></span></p>
+            <p class="header-address">Адреса доставки: <span id="display-address" style="font-weight:bold; color:#ff5722;"></span></p>
             <div id="auth-header" style="display:flex; align-items:center; gap:10px;"></div>
         </div>
     </header>
@@ -43,7 +43,8 @@
                     <input type="tel" id="client-phone" required placeholder="+380...">
                 </div>
 
-                <div id="order-user-note" style="margin-bottom: 15px; color: #2c3e50; font-weight: 600; display: none;"></div>
+                <div id="order-user-note" style="margin-bottom: 15px; color: #2c3e50; font-weight: 600; display: none;">
+                </div>
 
                 <button type="submit" class="btn-submit">Підтвердити замовлення</button>
             </form>

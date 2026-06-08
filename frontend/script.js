@@ -4,6 +4,7 @@ let currentRestaurantId = null;
 let currentRestaurantName = "";
 let isMobileCartOpen = false; // Додаємо назад цей прапорець
 
+
 // --- РОЗДІЛЕННЯ ЗАПУСКУ ЗАЛЕЖНО ВІД СТОРІНКИ ---
 document.addEventListener("DOMContentLoaded", () => {
   const path = window.location.pathname;
@@ -15,6 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
   } else if (path.includes("catalog.html")) {
     restorePageState();
     configureOrderForm();
+  } else if (path.includes("orders.html")) {
+    renderAuthHeader();
+    updateDisplayAddress();
+    initOrdersPage();
   } else if (path.includes("login.html") || path.includes("register.html")) {
     redirectIfAuthenticatedForAuthPages();
   } else if (path.includes("admin.html")) {
@@ -37,9 +42,7 @@ function restorePageState() {
     return;
   }
 
-  if (document.getElementById("display-address")) {
-    document.getElementById("display-address").innerText = address;
-  }
+  updateDisplayAddress();
 
   const savedCart = sessionStorage.getItem("cart");
   if (savedCart && savedCart !== "undefined") {
@@ -68,6 +71,14 @@ function goBackToWelcome() {
   localStorage.removeItem("userAddress");
   sessionStorage.clear();
   window.location.href = "index.html";
+}
+
+function updateDisplayAddress() {
+  const address = localStorage.getItem("userAddress") || "";
+  const displayElement = document.getElementById("display-address");
+  if (displayElement) {
+    displayElement.innerText = address;
+  }
 }
 
 // --- ЛОГІКА СТОРІНКИ ПРИВІТАННЯ (index.html) ---
@@ -113,7 +124,10 @@ function renderAuthHeader() {
 
   if (user) {
     authHeader.innerHTML = `
-      <span style="color: white; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
+      <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+        Замовлення
+      </button>
+      <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
       <button onclick="logout()" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
         Вийти
       </button>
@@ -121,7 +135,11 @@ function renderAuthHeader() {
 
     if (welcomeTitle) welcomeTitle.innerText = `🍕 Вітаємо, ${user.name}!`;
 
-    if (user.savedAddresses && user.savedAddresses.length > 0 && savedAddressesBlock) {
+    if (
+      user.savedAddresses &&
+      user.savedAddresses.length > 0 &&
+      savedAddressesBlock
+    ) {
       savedAddressesBlock.classList.remove("hidden");
       const container = document.getElementById("addresses-buttons-container");
       if (container) {
@@ -140,6 +158,10 @@ function renderAuthHeader() {
     }
   } else {
     authHeader.innerHTML = `
+      <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+        Замовлення
+      </button>
+      <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 Гість</span>
       <button onclick="window.location.href='login.html'" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
           Увійти
       </button>
@@ -171,7 +193,10 @@ function configureOrderForm() {
 
   if (!fieldsWrapper || !noteElement || !nameInput || !phoneInput) return;
 
-  if (user) {
+  const hasSavedName = user && user.name;
+  const hasSavedPhone = user && user.phone;
+
+  if (hasSavedName && hasSavedPhone) {
     fieldsWrapper.style.display = "none";
     nameInput.disabled = true;
     phoneInput.disabled = true;
@@ -182,6 +207,13 @@ function configureOrderForm() {
     fieldsWrapper.style.display = "block";
     nameInput.disabled = false;
     phoneInput.disabled = false;
+
+    if (hasSavedName) {
+      nameInput.value = user.name;
+    }
+    if (hasSavedPhone) {
+      phoneInput.value = user.phone;
+    }
 
     noteElement.style.display = "none";
     noteElement.innerText = "";
@@ -197,7 +229,8 @@ async function loginUser(event) {
   const password = document.getElementById("login-password")?.value || "";
 
   if (!email.trim() || !password.trim()) {
-    if (errorElement) errorElement.innerText = "Будь ласка, введіть email та пароль.";
+    if (errorElement)
+      errorElement.innerText = "Будь ласка, введіть email та пароль.";
     return;
   }
 
@@ -219,7 +252,8 @@ async function loginUser(event) {
 
     window.location.href = "catalog.html";
   } catch (error) {
-    if (errorElement) errorElement.innerText = error.message || "Помилка під час входу";
+    if (errorElement)
+      errorElement.innerText = error.message || "Помилка під час входу";
   }
 }
 
@@ -236,7 +270,8 @@ async function registerUser(event) {
   const password = document.getElementById("register-password")?.value || "";
 
   if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
-    if (errorElement) errorElement.innerText = "Усі поля є обов'язковими для заповнення.";
+    if (errorElement)
+      errorElement.innerText = "Усі поля є обов'язковими для заповнення.";
     return;
   }
 
@@ -253,11 +288,20 @@ async function registerUser(event) {
       throw new Error(data.message || "Помилка під час реєстрації");
     }
 
+    if (data.access_token && data.user) {
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.href = "catalog.html";
+      return;
+    }
+
     if (successElement) {
-      successElement.innerText = "Реєстрація пройшла успішно. Тепер можете увійти.";
+      successElement.innerText =
+        "Реєстрація пройшла успішно. Тепер можете увійти.";
     }
   } catch (error) {
-    if (errorElement) errorElement.innerText = error.message || "Помилка під час реєстрації";
+    if (errorElement)
+      errorElement.innerText = error.message || "Помилка під час реєстрації";
   }
 }
 
@@ -479,63 +523,316 @@ function updateCartUI() {
   }
 }
 
-function submitOrder(event) {
+async function submitOrder(event) {
   event.preventDefault();
-  if (cart.length === 0) return;
 
-  const user = getAuthUser();
-  const orderData = {
-    clientName: user ? user.name : document.getElementById("client-name").value,
-    clientPhone: user ? user.phone : document.getElementById("client-phone").value,
-    address: localStorage.getItem("userAddress"),
-    items: cart,
-    total: document.getElementById("total-amount").innerText,
-  };
-
-  if (!orderData.clientName || !orderData.clientPhone) {
-    alert("Будь ласка, заповніть своє ім'я та телефон для оформлення замовлення.");
+  if (cart.length === 0) {
+    alert("🛒 Кошик порожній!");
     return;
   }
 
-  console.log("Дані замовлення відправлено:", orderData);
-  alert(
-    `Дякуємо, ${orderData.clientName}! Замовлення оформлено на суму ${orderData.total} грн.`,
-  );
+  const user = getAuthUser();
+  let clientName, clientPhone;
 
-  cart = [];
-  initCatalog();
+  if (user && user.name) {
+    clientName = user.name;
+    clientPhone =
+      user.phone || document.getElementById("client-phone")?.value || "";
+  } else {
+    clientName = document.getElementById("client-name")?.value || "";
+    clientPhone = document.getElementById("client-phone")?.value || "";
+  }
+
+  if (!clientName || !clientPhone) {
+    alert(
+      "Будь ласка, заповніть своє ім'я та телефон для оформлення замовлення.",
+    );
+    return;
+  }
+
+  const totalAmount = document.getElementById("total-amount")?.innerText || "0";
+
+  const orderData = {
+    clientName: clientName,
+    clientPhone: clientPhone,
+    address: localStorage.getItem("userAddress") || "",
+    total: parseFloat(totalAmount),
+    itemsJson: JSON.stringify(
+      cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image,
+      })),
+    ),
+    userId: user?.id || null,
+  };
+
+  try {
+    const token = getAuthToken();
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const response = await fetch("http://localhost:3000/orders", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(orderData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Помилка оформлення замовлення");
+    }
+
+    const result = await response.json();
+
+    // ЛОГІКА ПЕРЕНАПРАВЛЕННЯ:
+    if (user) {
+      // Авторизований користувач - на сторінку історії замовлень
+      alert(
+        `✅ Дякуємо, ${clientName}! Замовлення #${result.id} оформлено на суму ${totalAmount} грн.`,
+      );
+      window.location.href = "orders.html";
+    } else {
+      // Гість - на сторінку відстеження з токеном
+      const trackingToken = result.trackingToken || result.id;
+      alert(`✅ Дякуємо, ${clientName}! Замовлення оформлено.`);
+      window.location.href = `track.html?token=${trackingToken}`;
+    }
+
+    // Очищуємо кошик
+    cart = [];
+    isMobileCartOpen = false;
+    updateCartUI();
+  } catch (error) {
+    console.error("Помилка:", error);
+    alert(`❌ Сталася помилка: ${error.message}`);
+  }
 }
 
-function initAdminPanel() {
+// Отримання тільки МОЇХ замовлень (для авторизованого користувача)
+async function fetchMyOrders() {
+  const token = getAuthToken();
+  
+  if (!token) {
+    return [];
+  }
+  
+  try {
+    const response = await fetch("http://localhost:3000/orders/my", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error("Помилка завантаження замовлень");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Помилка завантаження замовлень:", error);
+    return [];
+  }
+}
+
+/* function getStoredOrders() {
+  const ordersJson = localStorage.getItem("userOrders");
+  const orders = ordersJson ? JSON.parse(ordersJson) : [];
+  let changed = false;
+  const normalized = orders.map((order, index) => {
+    if (order.id == null) {
+      changed = true;
+      order.id = Date.now() + index;
+    }
+    return order;
+  });
+  if (changed) {
+    setStoredOrders(normalized);
+  }
+  return normalized;
+}
+
+function setStoredOrders(orders) {
+  localStorage.setItem("userOrders", JSON.stringify(orders));
+}
+
+function saveStoredOrder(order) {
+  if (order.id == null) {
+    order.id = generateOrderId();
+  }
+  const orders = getStoredOrders();
+  const existingIndex = orders.findIndex((o) => o.id === order.id);
+  if (existingIndex >= 0) {
+    orders[existingIndex] = order;
+  } else {
+    orders.unshift(order);
+  }
+  setStoredOrders(orders);
+}
+
+function generateOrderId() {
+  return Date.now();
+} */
+
+async function initOrdersPage() {
+  const user = getAuthUser();
+  const ordersTable = document.getElementById("orders-table-body");
+  const emptyMessage = document.getElementById("orders-empty");
+  const userLabel = document.getElementById("orders-user-label");
+  const pageTitle = document.getElementById("orders-page-title");
+
+  if (userLabel) {
+    userLabel.innerText = user
+      ? `Користувач: ${user.name}`
+      : "Користувач: Гість";
+  }
+
+  if (!ordersTable || !emptyMessage) return;
+
+  // Якщо користувач не авторизований, пропонуємо увійти
+  if (!user) {
+    emptyMessage.style.display = "block";
+    emptyMessage.innerHTML = `
+      🔒 Увійдіть в акаунт, щоб переглянути ваші замовлення.
+      <br><br>
+      <button onclick="window.location.href='login.html'" style="background: #ff5722; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+        Увійти
+      </button>
+    `;
+    ordersTable.innerHTML = "";
+    if (pageTitle) pageTitle.innerText = "Мої замовлення";
+    return;
+  }
+
+  try {
+    const orders = await fetchMyOrders();
+
+    if (!orders || orders.length === 0) {
+      emptyMessage.style.display = "block";
+      emptyMessage.innerHTML =
+        "📭 У вас ще немає замовлень. Перейдіть до каталогу та зробіть перше замовлення!";
+      ordersTable.innerHTML = "";
+      return;
+    }
+
+    emptyMessage.style.display = "none";
+    let html = "";
+
+    orders.forEach((order) => {
+      let statusClass = "";
+      let statusText = order.status || "Прийнято";
+
+      if (statusText === "Прийнято") statusClass = "status-placed";
+      else if (statusText === "Готується") statusClass = "status-cooking";
+      else if (statusText === "Доставлено") statusClass = "status-done";
+
+      let itemSummary = "";
+      try {
+        const items =
+          typeof order.itemsJson === "string"
+            ? JSON.parse(order.itemsJson)
+            : order.itemsJson;
+        itemSummary = items
+          .map((item) => `${item.name} x${item.quantity}`)
+          .join(", ");
+      } catch (e) {
+        itemSummary = "-";
+      }
+
+      const orderDate = new Date(order.createdAt).toLocaleString("uk-UA");
+
+      html += `
+        <tr class="${statusClass}">
+          <td>#${order.id}</td>
+          <td>${orderDate}</td>
+          <td>${order.clientName}</td>
+          <td>${order.clientPhone}</td>
+          <td>${order.address || "-"}</td>
+          <td>${itemSummary}</td>
+          <td><strong>${order.total} грн</strong></td>
+          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        </tr>
+      `;
+    });
+
+    ordersTable.innerHTML = html;
+  } catch (error) {
+    console.error("Помилка:", error);
+    emptyMessage.style.display = "block";
+    emptyMessage.innerHTML =
+      "❌ Помилка завантаження замовлень. Спробуйте пізніше.";
+    ordersTable.innerHTML = "";
+  }
+}
+
+
+// Оновлена функція initAdminPanel (для адмінки, отримує замовлення з бекенду)
+async function initAdminPanel() {
   const tableBody = document.getElementById("admin-orders-table");
   if (!tableBody) return;
 
-  let html = "";
-  mockOrders.forEach((order) => {
-    let statusClass = "";
-    if (order.status === "Прийнято") statusClass = "status-placed";
-    if (order.status === "Готується") statusClass = "status-cooking";
-    if (order.status === "Доставлено") statusClass = "status-done";
+  try {
+    const token = getAuthToken();
+    
+    // Перевірка, чи користувач адмін (тимчасово, поки немає ролей)
+    const response = await fetch("http://localhost:3000/orders", {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    });
+    
+    if (!response.ok) {
+      throw new Error("Помилка завантаження замовлень");
+    }
+    
+    const orders = await response.json();
 
-    html += `
-      <tr>
+    if (orders.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">📭 Немає замовлень</td></tr>';
+      return;
+    }
+
+    let html = "";
+    for (const order of orders) {
+      let statusClass = "";
+      const statusText = order.status || "Прийнято";
+      
+      if (statusText === "Прийнято") statusClass = "status-placed";
+      else if (statusText === "Готується") statusClass = "status-cooking";
+      else if (statusText === "Доставлено") statusClass = "status-done";
+
+      // Парсимо itemsJson
+      let itemSummary = "";
+      try {
+        const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
+        itemSummary = items.map(item => `${item.name} x${item.quantity}`).join(", ");
+      } catch(e) {
+        itemSummary = "-";
+      }
+
+      html += `
+        <tr>
           <td><strong>#${order.id}</strong></td>
-          <td>${order.name}</td>
-          <td>${order.phone}</td>
-          <td>${order.address}</td>
-          <td>${order.items}</td>
+          <td>${order.clientName}</td>
+          <td>${order.clientPhone}</td>
+          <td>${order.address || "-"}</td>
+          <td>${itemSummary}</td>
           <td><strong>${order.total} грн</strong></td>
           <td>
-              <select onchange="changeOrderStatus(${order.id}, this.value)" class="status-select ${statusClass}">
-                  <option value="Прийнято" ${order.status === "Прийнято" ? "selected" : ""}>New: Прийнято</option>
-                  <option value="Готується" ${order.status === "Готується" ? "selected" : ""}>In Process: Готується</option>
-                  <option value="Доставлено" ${order.status === "Доставлено" ? "selected" : ""}>Done: Доставлено</option>
-              </select>
+            <select onchange="changeOrderStatus(${order.id}, this.value)" class="status-select ${statusClass}">
+              <option value="Прийнято" ${statusText === "Прийнято" ? "selected" : ""}>📋 Прийнято</option>
+              <option value="Готується" ${statusText === "Готується" ? "selected" : ""}>🍳 Готується</option>
+              <option value="Доставлено" ${statusText === "Доставлено" ? "selected" : ""}>✅ Доставлено</option>
+            </select>
           </td>
-      </tr>
-    `;
-  });
-  tableBody.innerHTML = html;
+        </tr>
+      `;
+    }
+    tableBody.innerHTML = html;
+  } catch (error) {
+    console.error("Помилка:", error);
+    tableBody.innerHTML = '<tr><td colspan="8" style="color: red; text-align: center;">❌ Помилка завантаження замовлень</td></tr>';
+  }
 }
 
 function toggleMobileCart(open) {
@@ -561,10 +858,71 @@ window.addEventListener("resize", () => {
   }
 });
 
-function changeOrderStatus(orderId, newStatus) {
-  const order = mockOrders.find((o) => o.id === orderId);
-  if (order) {
-    order.status = newStatus;
-    initAdminPanel();
+// Оновлена функція changeOrderStatus (оновлює статус через бекенд)
+async function changeOrderStatus(orderId, newStatus) {
+  try {
+    const token = getAuthToken();
+    
+    const response = await fetch(`http://localhost:3000/orders/${orderId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { "Authorization": `Bearer ${token}` })
+      },
+      body: JSON.stringify({ status: newStatus }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Помилка оновлення статусу");
+    }
+
+    // Оновлюємо відображення
+    if (window.location.pathname.includes("admin.html")) {
+      await initAdminPanel();
+    }
+    if (window.location.pathname.includes("orders.html")) {
+      await initOrdersPage();
+    }
+  } catch (error) {
+    console.error("Помилка:", error);
+    alert("❌ Помилка оновлення статусу замовлення");
   }
 }
+
+// Отримання замовлень з бекенду
+async function fetchUserOrders() {
+  const token = getAuthToken();
+  
+  if (!token) {
+    return [];
+  }
+  
+  try {
+    const response = await fetch("http://localhost:3000/orders", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error("Помилка завантаження замовлень");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Помилка завантаження замовлень:", error);
+    return [];
+  }
+}
+
+
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== "userOrders") return;
+  if (window.location.pathname.includes("orders.html")) {
+    initOrdersPage();
+  }
+  if (window.location.pathname.includes("admin.html")) {
+    initAdminPanel();
+  }
+});

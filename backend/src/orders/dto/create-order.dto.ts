@@ -1,8 +1,26 @@
+import { IsString, IsNumber, IsOptional, IsNotEmpty } from 'class-validator';
+
 export class CreateOrderDto {
-  clientName!: string;
-  clientPhone!: string;
+  @IsString()
+  @IsNotEmpty()
   address!: string;
+
+  @IsNumber()
+  @IsNotEmpty()
   total!: number;
-  itemsJson!: any;
-  userId?: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  restaurantId!: number;
+
+  @IsOptional()
+  itemsJson?: any;
+
+  @IsString()
+  @IsOptional()
+  guestName?: string;
+
+  @IsString()
+  @IsOptional()
+  guestPhone?: string;
 }

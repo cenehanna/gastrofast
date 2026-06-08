@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Відстеження замовлення — GastroFast</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .track-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .order-status {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .status-placed {
+            background: #fdcb6e;
+        }
+
+        .status-cooking {
+            background: #f39c12;
+            color: white;
+        }
+
+        .status-done {
+            background: #00b894;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+        }
+
+        .btn-home {
+            background: #ff5722;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <h2 onclick="window.location.href='index.html'" style="cursor:pointer;">🍕 GastroFast</h2>
+            <p>Відстеження замовлення</p>
+        </div>
+    </header>
+
+    <main>
+        <div class="track-container">
+            <h1>📦 Статус вашого замовлення</h1>
+            <div id="order-info" class="loading">
+                ⏳ Завантаження інформації про замовлення...
+            </div>
+            <button class="btn-home" onclick="window.location.href='index.html'">
+                🍽️ На головну
+            </button>
+        </div>
+    </main>
+
+    <script>
+        async function trackOrder() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            const orderInfo = document.getElementById('order-info');
+
+            if (!token) {
+                orderInfo.innerHTML = `
+                    <div style="color: red; padding: 20px;">
+                        ❌ Токен замовлення не знайдено.<br>
+                        Будь ласка, перевірте посилання або зверніться до підтримки.
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:3000/orders/track?token=${token}`);
+
+                if (!response.ok) {
+                    throw new Error('Замовлення не знайдено');
+                }
+
+                const order = await response.json();
+
+                let statusClass = '';
+                let statusText = order.status || 'Прийнято';
+                let statusEmoji = '📋';
+
+                if (statusText === 'Прийнято') {
+                    statusClass = 'status-placed';
+                    statusEmoji = '📋';
+                } else if (statusText === 'Готується') {
+                    statusClass = 'status-cooking';
+                    statusEmoji = '🍳';
+                } else if (statusText === 'Доставлено') {
+                    statusClass = 'status-done';
+                    statusEmoji = '✅';
+                }
+
+                let itemSummary = '';
+                try {
+                    const items = typeof order.itemsJson === 'string' ? JSON.parse(order.itemsJson) : order.itemsJson;
+                    itemSummary = items.map(item => `${item.name} x${item.quantity}`).join(', ');
+                } catch (e) {
+                    itemSummary = '-';
+                }
+
+                const orderDate = new Date(order.createdAt).toLocaleString('uk-UA');
+
+                orderInfo.innerHTML = `
+                    <div class="order-status ${statusClass}">
+                        <h2>${statusEmoji} ${statusText}</h2>
+                        <p><strong>Номер замовлення:</strong> #${order.id}</p>
+                        <p><strong>Дата:</strong> ${orderDate}</p>
+                        <p><strong>Страви:</strong> ${itemSummary}</p>
+                        <p><strong>Сума:</strong> ${order.total} грн</p>
+                        <p><strong>Адреса доставки:</strong> ${order.address || 'Не вказано'}</p>
+                        <hr>
+                        <p><strong>Контактна особа:</strong> ${order.clientName}</p>
+                        <p><strong>Телефон:</strong> ${order.clientPhone}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Помилка:', error);
+                orderInfo.innerHTML = `
+                    <div style="color: red; padding: 20px;">
+                        ❌ ${error.message}<br>
+                        Будь ласка, перевірте посилання або зверніться до підтримки.
+                    </div>
+                `;
+            }
+        }
+
+        // Запускаємо при завантаженні
+        trackOrder();
+    </script>
+</body>
+
+</html>

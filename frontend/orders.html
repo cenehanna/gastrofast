@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Замовлення — GastroFast</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <h2 onclick="window.location.href='index.html'" style="cursor:pointer;">🍕 GastroFast</h2>
+            <p class="header-address">Адреса доставки: <span id="display-address"
+                    style="font-weight:bold; color:#ff5722;"></span></p>
+            <div id="auth-header" style="display:flex; align-items:center; gap:10px;"></div>
+        </div>
+    </header>
+
+    <main class="catalog-container">
+        <section class="content-left">
+            <h1 id="orders-page-title">Мої замовлення</h1>
+            <p id="orders-user-label" style="margin-bottom: 20px; font-weight: 600; color: #2c3e50;">Користувач: ...</p>
+
+            <div id="orders-empty"
+                style="padding: 25px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 12px; color: #a0522d; margin-bottom: 20px; display: none;">
+                Немає замовлень. Оформіть перше замовлення в каталозі.
+            </div>
+
+            <div
+                style="overflow-x:auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <table class="admin-table" style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Дата</th> <!-- Додайте цю колонку -->
+                            <th>Ім'я</th>
+                            <th>Телефон</th>
+                            <th>Адреса</th>
+                            <th>Позиції</th>
+                            <th>Сума</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
