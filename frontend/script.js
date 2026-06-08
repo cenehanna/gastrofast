@@ -3,6 +3,9 @@ let cart = [];
 let currentRestaurantId = null;
 let currentRestaurantName = "";
 let isMobileCartOpen = false; // Додаємо назад цей прапорець
+let ordersPollingInterval = null;
+let adminPollingInterval = null;
+const ORDERS_POLLING_DELAY = 8000; // 8 секунд для polling
 
 
 // --- РОЗДІЛЕННЯ ЗАПУСКУ ЗАЛЕЖНО ВІД СТОРІНКИ ---
@@ -20,10 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAuthHeader();
     updateDisplayAddress();
     initOrdersPage();
+    startOrdersPolling();
   } else if (path.includes("login.html") || path.includes("register.html")) {
     redirectIfAuthenticatedForAuthPages();
   } else if (path.includes("admin.html")) {
     initAdminPanel();
+    startAdminPolling();
   }
 });
 
@@ -70,7 +75,41 @@ function restorePageState() {
 function goBackToWelcome() {
   localStorage.removeItem("userAddress");
   sessionStorage.clear();
+  stopOrdersPolling();
+  stopAdminPolling();
   window.location.href = "index.html";
+}
+
+function startOrdersPolling() {
+  stopOrdersPolling();
+  ordersPollingInterval = setInterval(() => {
+    if (window.location.pathname.includes("orders.html")) {
+      initOrdersPage();
+    }
+  }, ORDERS_POLLING_DELAY);
+}
+
+function stopOrdersPolling() {
+  if (ordersPollingInterval) {
+    clearInterval(ordersPollingInterval);
+    ordersPollingInterval = null;
+  }
+}
+
+function startAdminPolling() {
+  stopAdminPolling();
+  adminPollingInterval = setInterval(() => {
+    if (window.location.pathname.includes("admin.html")) {
+      initAdminPanel();
+    }
+  }, ORDERS_POLLING_DELAY);
+}
+
+function stopAdminPolling() {
+  if (adminPollingInterval) {
+    clearInterval(adminPollingInterval);
+    adminPollingInterval = null;
+  }
 }
 
 function updateDisplayAddress() {
@@ -215,6 +254,8 @@ function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
   sessionStorage.clear();
+  stopOrdersPolling();
+  stopAdminPolling();
   if (window.location.pathname.includes("catalog.html")) {
     window.location.href = "index.html";
   } else {
