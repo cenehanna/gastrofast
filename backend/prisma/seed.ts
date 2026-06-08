@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+﻿import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -85,6 +85,63 @@ async function main() {
       },
     },
   });
+ await prisma.restaurant.create({
+   data: {
+     name: 'Mama Pizza / Мама Піца',
+     description: 'Мама Піца - це мережа піцерій, яка пропонує широкий вибір смачних піц та інших страв. Вони відомі своїм якісним обслуговуванням та смачними рецептами, які задовольнять навіть найвибагливіших гурманів.',
+     image: 'images/mama.webp',
+     dishes: {
+       create: [
+         {
+           name: 'Піца Тропікана (30см)',
+           description: 'Сир Моцарела, куряча грудка, ананас, соус на вибір',
+           price: 210.0,
+           image: 'images/tropicana.png',
+         },
+         {
+           name: 'Чизбургер піца (30 см)',
+           description:
+             'Моцарела, сир, чедер, яловича котлета для бургера, бекон, цибулька маринована, солоний огірок, помідор.',
+           price: 295.0,
+           image: 'images/chizburgerpiza.png',
+         },
+         {
+           name: 'КОМБО Мисливський +',
+           description:
+             'Хотдог французький, з мисливською сосискою - 1 шт., картопля фрі L - 1 шт., напій Pepsi 0,33 - 1 шт.',
+           price: 155.0,
+           image: 'images/kombo.jpg',
+         },
+       ],
+     },
+   },
+ });
+
+await prisma.restaurant.create({
+  data: {
+    name: 'KFC',
+    description:
+      'З детальною інформацією про продукцію KFC Україна можна ознайомитись на сайті kfc.ua у розділах «Інгрідієнти», «Алергени» та «Харчова цінність». Підтверджуючи замовлення, ви погоджуєтесь з загальними умовами користування.',
+    image: 'images/kfc.webp',
+    dishes: {
+      create: [
+        {
+          name: 'ГРАНДЕР БУРГЕР МЕНЮ',
+          description: 'Грандер Бургер, Фрі Стандарт, Напій. Меню, яке втамує навіть грандіозний апетит.',
+          price: 372.0,
+          image: 'images/grandburger.webp',
+        },
+        {
+          name: 'БАКЕТ 8 НIЖОК',
+          description:
+            '8 курячих ніжок. Соковите цільне м’ясо, хрустка скоринка — класика, яка ніколи не підводить | 672 Г | 116,928 Г ПРОТЕЇНУ | 1630,9 ККАЛ',
+          price: 472.0,
+          image: 'images/backet.webp',
+        },
+      ],
+    },
+  },
+});
 
   console.log('🎉 Базу даних успішно наповнено ресторанами та стравами!');
 }

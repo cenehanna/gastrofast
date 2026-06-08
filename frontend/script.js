@@ -144,15 +144,36 @@ function addSavedAddress(address) {
   const trimmed = address.trim();
   if (!trimmed) return;
 
-  const addresses = getSavedAddresses().filter(
+  const user = getAuthUser();
+  if (user) {
+    const userAddresses = Array.isArray(user.savedAddresses)
+      ? user.savedAddresses.filter(
+          (item) => item.toLowerCase() !== trimmed.toLowerCase(),
+        )
+      : [];
+    userAddresses.unshift(trimmed);
+    user.savedAddresses = userAddresses.slice(0, MAX_SAVED_ADDRESSES);
+    localStorage.setItem("user", JSON.stringify(user));
+    return;
+  }
+
+  const localAddresses = getSavedAddresses().filter(
     (item) => item.toLowerCase() !== trimmed.toLowerCase(),
   );
-  addresses.unshift(trimmed);
-  saveSavedAddresses(addresses.slice(0, MAX_SAVED_ADDRESSES));
+  localAddresses.unshift(trimmed);
+  saveSavedAddresses(localAddresses.slice(0, MAX_SAVED_ADDRESSES));
+}
+
+function getSavedAddressesForWelcome() {
+  const user = getAuthUser();
+  if (user && Array.isArray(user.savedAddresses)) {
+    return user.savedAddresses.slice(0, MAX_SAVED_ADDRESSES);
+  }
+  return getSavedAddresses();
 }
 
 function renderSavedAddressesOnWelcome() {
-  const addresses = getSavedAddresses();
+  const addresses = getSavedAddressesForWelcome();
   const savedAddressesBlock = document.getElementById("saved-addresses-block");
   const container = document.getElementById("addresses-buttons-container");
 
@@ -165,16 +186,24 @@ function renderSavedAddressesOnWelcome() {
   }
 
   savedAddressesBlock.classList.remove("hidden");
-  container.innerHTML = addresses
-    .map(
-      (addr) =>
-        `<button onclick="selectSavedAddress(${JSON.stringify(
-          addr,
-        )})" style="background: #edf2f7; border: 1px solid #cbd5e0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: 0.2s;">
-              📍 ${addr}
-          </button>`,
-    )
-    .join("");
+  container.innerHTML = "";
+
+  addresses.forEach((addr) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `📍 ${addr}`;
+    button.dataset.address = addr;
+    button.style.background = "#edf2f7";
+    button.style.border = "1px solid #cbd5e0";
+    button.style.padding = "8px 12px";
+    button.style.borderRadius = "8px";
+    button.style.cursor = "pointer";
+    button.style.fontSize = "0.9rem";
+    button.style.fontWeight = "500";
+    button.style.transition = "0.2s";
+    button.addEventListener("click", () => selectSavedAddress(addr));
+    container.appendChild(button);
+  });
 }
 
 function saveAddressAndGo() {
@@ -191,8 +220,10 @@ function saveAddressAndGo() {
 
 function selectSavedAddress(address) {
   const input = document.getElementById("user-address");
-  if (input) input.value = address;
-  saveAddressAndGo();
+  if (input) {
+    input.value = address;
+    input.focus();
+  }
 }
 
 // --- АУТЕНТИФІКАЦІЯ ТА ПРОФІЛЬ КОРИСТУВАЧА ---
