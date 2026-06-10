@@ -5,6 +5,7 @@ let currentRestaurantName = "";
 let isMobileCartOpen = false; // Додаємо назад цей прапорець
 let ordersPollingInterval = null;
 let adminPollingInterval = null;
+let accountMenuOutsideClickListenerAdded = false;
 const ORDERS_POLLING_DELAY = 8000; // 8 секунд для polling
 
 
@@ -278,6 +279,23 @@ function isAuthenticated() {
   return !!getAuthToken();
 }
 
+function isMobileView() {
+  return window.innerWidth <= 900;
+}
+
+function toggleAccountMenu(event) {
+  event.stopPropagation();
+  const menu = document.getElementById("account-menu");
+  if (!menu) return;
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+function closeAccountMenu() {
+  const menu = document.getElementById("account-menu");
+  if (!menu) return;
+  menu.style.display = "none";
+}
+
 function renderAuthHeader() {
   const authHeader = document.getElementById("auth-header");
   const savedAddressesBlock = document.getElementById("saved-addresses-block");
@@ -286,17 +304,40 @@ function renderAuthHeader() {
   if (!authHeader) return;
 
   const user = getAuthUser();
+  const isMobile = isMobileView();
 
   if (user) {
-    authHeader.innerHTML = `
-      <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
-        Замовлення
-      </button>
-      <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
-      <button onclick="logout()" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
-        Вийти
-      </button>
-    `;
+    if (isMobile) {
+      authHeader.innerHTML = `
+        <div style="position: relative; display: inline-block;">
+          <button id="account-menu-button" onclick="toggleAccountMenu(event)" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+            👤 ${user.name} ▼
+          </button>
+          <div id="account-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 10px); background: white; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,0.12); min-width: 170px; z-index: 1000;">
+            <button onclick="window.location.href='orders.html'" style="width: 100%; background: white; color: #ff5722; border: none; border-bottom: 1px solid #f4f4f4; padding: 12px 15px; text-align: left; cursor: pointer;">
+              Замовлення
+            </button>
+            <button onclick="logout()" style="width: 100%; background: white; color: #ff5722; border: none; padding: 12px 15px; text-align: left; cursor: pointer;">
+              Вийти
+            </button>
+          </div>
+        </div>
+      `;
+      if (!accountMenuOutsideClickListenerAdded) {
+        document.addEventListener("click", closeAccountMenu);
+        accountMenuOutsideClickListenerAdded = true;
+      }
+    } else {
+      authHeader.innerHTML = `
+        <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+          Замовлення
+        </button>
+        <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
+        <button onclick="logout()" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+          Вийти
+        </button>
+      `;
+    }
 
     if (welcomeTitle) welcomeTitle.innerText = `🍕 Вітаємо, ${user.name}!`;
 
@@ -322,18 +363,29 @@ function renderAuthHeader() {
       savedAddressesBlock.classList.add("hidden");
     }
   } else {
-    authHeader.innerHTML = `
-      <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
-        Замовлення
-      </button>
-      <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 Гість</span>
-      <button onclick="window.location.href='login.html'" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+    if (isMobile) {
+      authHeader.innerHTML = `
+        <button onclick="window.location.href='login.html'" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
           Увійти
-      </button>
-      <button onclick="window.location.href='register.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+        </button>
+        <button onclick="window.location.href='register.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
           Реєстрація
-      </button>
-    `;
+        </button>
+      `;
+    } else {
+      authHeader.innerHTML = `
+        <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+          Замовлення
+        </button>
+        <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 Гість</span>
+        <button onclick="window.location.href='login.html'" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+            Увійти
+        </button>
+        <button onclick="window.location.href='register.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+            Реєстрація
+        </button>
+      `;
+    }
     if (savedAddressesBlock) savedAddressesBlock.classList.add("hidden");
   }
 }

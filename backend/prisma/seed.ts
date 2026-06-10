@@ -42,13 +42,15 @@ async function main() {
             name: 'Піца Капрічоза',
             description: 'Томати, моцарела, шинка, гриби',
             price: 190.0,
-            image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200',
+            image:
+              'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200',
           },
           {
             name: 'Піца Маргарита',
             description: 'Класична піца з томатами та сиром',
             price: 150.0,
-            image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=200',
+            image:
+              'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=200',
           },
         ],
       },
@@ -61,20 +63,23 @@ async function main() {
     data: {
       name: 'Burger Club',
       description: 'Соковиті бургери та хрустка картопля фрі',
-      image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
+      image:
+        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
       dishes: {
         create: [
           {
             name: 'Бургер Класичний',
             description: 'Яловича котлета, сир чеддер, авторський соус',
             price: 140.0,
-            image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200',
+            image:
+              'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200',
           },
           {
             name: 'Картопля Фрі',
             description: 'Хрустка картопля з сіллю та кетчупом',
             price: 60.0,
-            image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=200',
+            image:
+              'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=200',
           },
         ],
       },
@@ -86,27 +91,34 @@ async function main() {
   await prisma.restaurant.create({
     data: {
       name: 'Mama Pizza / Мама Піца',
-      description: 'Мама Піца - це мережа піцерій, яка пропонує широкий вибір смачних піц та інших страв. Вони відомі своїм якісним обслуговуванням.',
-      image: 'https://images.unsplash.com/photo-1590947132387-155cc02f3212?w=400',
+      description:
+        'Мама Піца - це мережа піцерій, яка пропонує широкий вибір смачних піц та інших страв. Вони відомі своїм якісним обслуговуванням.',
+      image:
+        'https://images.unsplash.com/photo-1590947132387-155cc02f3212?w=400',
       dishes: {
         create: [
           {
             name: 'Піца Тропікана (30см)',
             description: 'Сир Моцарела, куряча грудка, ананас, соус на вибір',
             price: 210.0,
-            image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200',
+            image:
+              'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200',
           },
           {
             name: 'Чизбургер піца (30 см)',
-            description: 'Моцарела, сир чедер, яловича котлета для бургера, бекон, цибулька маринована, солоний огірок, помідор.',
+            description:
+              'Моцарела, сир чедер, яловича котлета для бургера, бекон, цибулька маринована, солоний огірок, помідор.',
             price: 295.0,
-            image: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=200',
+            image:
+              'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=200',
           },
           {
             name: 'КОМБО Мисливський +',
-            description: 'Хотдог французький з мисливською сосискою - 1 шт., картопля фрі L - 1 шт., напій Pepsi 0,33 - 1 шт.',
+            description:
+              'Хотдог французький з мисливською сосискою - 1 шт., картопля фрі L - 1 шт., напій Pepsi 0,33 - 1 шт.',
             price: 155.0,
-            image: 'https://images.unsplash.com/photo-1534939561126-855b8675edd7?w=200',
+            image:
+              'https://images.unsplash.com/photo-1534939561126-855b8675edd7?w=200',
           },
         ],
       },
@@ -118,21 +130,27 @@ async function main() {
   await prisma.restaurant.create({
     data: {
       name: 'KFC',
-      description: 'З детальною інформацією про продукцію KFC Україна можна ознайомитись на сайті kfc.ua. Підтверджуючи замовлення, ви погоджуєтесь з умовами.',
-      image: 'https://images.unsplash.com/photo-1513639776629-7b61b0ac49cb?w=400',
+      description:
+        'З детальною інформацією про продукцію KFC Україна можна ознайомитись на сайті kfc.ua. Підтверджуючи замовлення, ви погоджуєтесь з умовами.',
+      image:
+        'https://images.unsplash.com/photo-1513639776629-7b61b0ac49cb?w=400',
       dishes: {
         create: [
           {
             name: 'ГРАНДЕР БУРГЕР МЕНЮ',
-            description: 'Грандер Бургер, Фрі Стандарт, Напій. Меню, яке втамує навіть грандіозний апетит.',
+            description:
+              'Грандер Бургер, Фрі Стандарт, Напій. Меню, яке втамує навіть грандіозний апетит.',
             price: 372.0,
-            image: 'https://images.unsplash.com/photo-1625813506062-0aeb1d7a094b?w=200',
+            image:
+              'https://images.unsplash.com/photo-1625813506062-0aeb1d7a094b?w=200',
           },
           {
             name: 'БАКЕТ 8 НIЖОК',
-            description: '8 курячих ніжок. Соковите цільне м’ясо, хрустка скоринка — класика, яка ніколи не підводить.',
+            description:
+              '8 курячих ніжок. Соковите цільне м’ясо, хрустка скоринка — класика, яка ніколи не підводить.',
             price: 472.0,
-            image: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=200',
+            image:
+              'https://images.unsplash.com/photo-1562967914-608f82629710?w=200',
           },
         ],
       },
