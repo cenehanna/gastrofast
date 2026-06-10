@@ -402,7 +402,7 @@ async function loginUser(event) {
   }
 
   try {
-    const response = await fetch("http://localhost:3000/auth/login", {
+    const response = await fetch("https://gastrofast.onrender.com/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -443,7 +443,7 @@ async function registerUser(event) {
   }
 
   try {
-    const response = await fetch("http://localhost:3000/auth/register", {
+    const response = await fetch("https://gastrofast.onrender.com/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, phone, password }),
@@ -481,7 +481,7 @@ function redirectIfAuthenticatedForAuthPages() {
 // --- ЛОГІКА КАТАЛОГУ ТА МЕНЮ СТРАВ (catalog.html) ---
 async function fetchRestaurants() {
   try {
-    const response = await fetch("http://localhost:3000/restaurants");
+    const response = await fetch("https://gastrofast.onrender.com/restaurants");
     if (!response.ok) {
       throw new Error("Помилка завантаження даних із сервера");
     }
@@ -543,7 +543,7 @@ async function loadRestaurantMenuFromAPI(
 
   try {
     const response = await fetch(
-      `http://localhost:3000/restaurants/${restaurantId}`,
+      `https://gastrofast.onrender.com/restaurants/${restaurantId}`,
     );
     const restaurant = await response.json();
 
@@ -738,7 +738,7 @@ async function submitOrder(event) {
     const headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const response = await fetch("http://localhost:3000/orders", {
+    const response = await fetch("https://gastrofast.onrender.com/orders", {
       method: "POST",
       headers: headers,
       body: JSON.stringify(orderData),
@@ -782,7 +782,7 @@ async function fetchMyOrders() {
   }
 
   try {
-    const response = await fetch("http://localhost:3000/orders/my", {
+    const response = await fetch("https://gastrofast.onrender.com/orders/my", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -891,7 +891,7 @@ async function initOrdersPage() {
     console.log("Завантаження замовлень для користувача:", user.id);
     console.log("Токен:", token.substring(0, 20) + "...");
 
-    const response = await fetch("http://localhost:3000/orders/my", {
+    const response = await fetch("https://gastrofast.onrender.com/orders/my", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -983,7 +983,7 @@ async function initAdminPanel() {
     const token = getAuthToken();
     
     // Перевірка, чи користувач адмін (тимчасово, поки немає ролей)
-    const response = await fetch("http://localhost:3000/orders", {
+    const response = await fetch("https://gastrofast.onrender.com/orders", {
       headers: token ? { "Authorization": `Bearer ${token}` } : {}
     });
     
@@ -1072,7 +1072,7 @@ async function changeOrderStatus(orderId, newStatus) {
   try {
     const token = getAuthToken();
     
-    const response = await fetch(`http://localhost:3000/orders/${orderId}`, {
+    const response = await fetch(`https://gastrofast.onrender.com/orders/${orderId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -1109,7 +1109,7 @@ async function fetchUserOrders() {
   }
   
   try {
-    const response = await fetch("http://localhost:3000/orders", {
+    const response = await fetch("https://gastrofast.onrender.com/orders", {
       headers: {
         "Authorization": `Bearer ${token}`
       }
