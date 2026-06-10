@@ -13,11 +13,11 @@ async function bootstrap() {
     }),
   );
 
-  // ВАЖЛИВО: додайте 'Authorization' в allowedHeaders
+  // Увімкнено CORS для всіх коренів, з підтримкою Authorization
   app.enableCors({
-    origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'null'],
+    origin: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'], // Додано Authorization!
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
