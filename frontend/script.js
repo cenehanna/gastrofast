@@ -29,8 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
   } else if (path.includes("login.html") || path.includes("register.html")) {
     redirectIfAuthenticatedForAuthPages();
   } else if (path.includes("admin.html")) {
-    initAdminPanel();
-    startAdminPolling();
+    if (ensureAdminAccess()) {
+      renderAuthHeader();
+      initAdminPanel();
+      startAdminPolling();
+    }
   }
 });
 
@@ -241,6 +244,19 @@ function getAuthToken() {
   return localStorage.getItem("token");
 }
 
+function isAdminUser() {
+  const user = getAuthUser();
+  return user && user.role === 'ADMIN';
+}
+
+function ensureAdminAccess() {
+  if (!isAdminUser()) {
+    window.location.href = 'catalog.html';
+    return false;
+  }
+  return true;
+}
+
 function translateOrderStatus(status) {
   switch (status) {
     case "PENDING":
@@ -311,6 +327,14 @@ function renderAuthHeader() {
   const isMobile = isMobileView();
 
   if (user) {
+    const adminButton = isAdminUser()
+      ? `
+        <button onclick="window.location.href='admin.html'" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+          Адмінка
+        </button>
+      `
+      : '';
+
     if (isMobile) {
       authHeader.innerHTML = `
         <div style="position: relative; display: inline-block;">
@@ -321,6 +345,11 @@ function renderAuthHeader() {
             <button onclick="window.location.href='orders.html'" style="width: 100%; background: white; color: #ff5722; border: none; border-bottom: 1px solid #f4f4f4; padding: 12px 15px; text-align: left; cursor: pointer;">
               Замовлення
             </button>
+            ${isAdminUser() ? `
+              <button onclick="window.location.href='admin.html'" style="width: 100%; background: white; color: #ff5722; border: none; border-bottom: 1px solid #f4f4f4; padding: 12px 15px; text-align: left; cursor: pointer;">
+                Адмінка
+              </button>
+            ` : ''}
             <button onclick="logout()" style="width: 100%; background: white; color: #ff5722; border: none; padding: 12px 15px; text-align: left; cursor: pointer;">
               Вийти
             </button>
@@ -336,6 +365,7 @@ function renderAuthHeader() {
         <button onclick="window.location.href='orders.html'" style="background: white; color: #ff5722; border: 1px solid #ff5722; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px;">
           Замовлення
         </button>
+        ${adminButton}
         <span style="color: #ff5722; margin-right: 15px; font-weight: bold;">👤 ${user.name}</span>
         <button onclick="logout()" style="background: #ff5722; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
           Вийти
@@ -459,7 +489,11 @@ async function loginUser(event) {
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
-    window.location.href = "catalog.html";
+    if (data.user && data.user.role === "ADMIN") {
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "catalog.html";
+    }
   } catch (error) {
     if (errorElement)
       errorElement.innerText = error.message || "Помилка під час входу";
@@ -581,7 +615,16 @@ async function loadRestaurantMenuFromAPI(
   if (!mainContent) return;
 
   const cartSidebar = document.getElementById("cart-sidebar");
-  if (cartSidebar) cartSidebar.classList.remove("hidden");
+  const isMobile = window.innerWidth <= 900;
+  if (cartSidebar) {
+    // On mobile avoid immediately showing the sidebar to prevent a flicker;
+    // only show if the mobile cart is explicitly open or on desktop.
+    if (!isMobile || isMobileCartOpen) {
+      cartSidebar.classList.remove("hidden");
+    } else {
+      cartSidebar.classList.add("hidden");
+    }
+  }
 
   try {
     const response = await fetch(
@@ -1020,6 +1063,10 @@ async function initOrdersPage() {
 async function initAdminPanel() {
   const tableBody = document.getElementById("admin-orders-table");
   if (!tableBody) return;
+
+  if (!ensureAdminAccess()) {
+    return;
+  }
 
   try {
     const token = getAuthToken();

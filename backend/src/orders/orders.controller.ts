@@ -15,6 +15,8 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { GetUser } from '../auth/user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { randomUUID } from 'crypto';
 
 @Controller('orders')
@@ -22,6 +24,8 @@ export class OrdersController {
   constructor(private prisma: PrismaService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   async getAllOrders() {
     const orders = await this.prisma.order.findMany({
       include: {
@@ -302,6 +306,8 @@ export class OrdersController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   async updateOrderStatus(
     @Param('id') id: string,
     @Body() body: { status: string },
