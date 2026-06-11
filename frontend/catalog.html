@@ -17,6 +17,14 @@
         </div>
     </header>
 
+    <section class="search-panel">
+        <div class="search-panel-inner">
+            <input id="dish-search-input" type="search" placeholder="Пошук страви за назвою або рестораном..." onkeydown="if(event.key==='Enter') handleDishSearch()">
+            <button type="button" onclick="handleDishSearch()">Шукати</button>
+            <button id="clear-search-button" type="button" class="secondary-button hidden" onclick="clearDishSearch()">Скинути</button>
+        </div>
+    </section>
+
     <main class="catalog-container">
         <section id="main-content" class="content-left">
         </section>

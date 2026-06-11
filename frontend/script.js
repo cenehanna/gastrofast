@@ -6,6 +6,7 @@ let isMobileCartOpen = false; // Додаємо назад цей прапоре
 let ordersPollingInterval = null;
 let adminPollingInterval = null;
 let accountMenuOutsideClickListenerAdded = false;
+let restaurantsCache = [];
 const ORDERS_POLLING_DELAY = 8000; // 8 секунд для polling
 
 
@@ -21,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   } else if (path.includes("catalog.html")) {
     restorePageState();
     configureOrderForm();
+    initCatalogSearch();
   } else if (path.includes("orders.html")) {
     renderAuthHeader();
     updateDisplayAddress();
@@ -562,10 +564,144 @@ async function fetchRestaurants() {
       throw new Error("Помилка завантаження даних із сервера");
     }
     const restaurants = await response.json();
+    restaurantsCache = restaurants;
     renderRestaurants(restaurants);
   } catch (error) {
     console.error("Не вдалося завантажити ресторани:", error);
   }
+}
+
+async function fetchRestaurantsCache() {
+  if (restaurantsCache.length > 0) {
+    return restaurantsCache;
+  }
+
+  try {
+    const response = await fetch("https://gastrofast.onrender.com/restaurants");
+    if (!response.ok) {
+      throw new Error("Помилка завантаження даних із сервера");
+    }
+    restaurantsCache = await response.json();
+    return restaurantsCache;
+  } catch (error) {
+    console.error("Не вдалося завантажити ресторани:", error);
+    return [];
+  }
+}
+
+function initCatalogSearch() {
+  const input = document.getElementById("dish-search-input");
+  const clearButton = document.getElementById("clear-search-button");
+
+  if (input) {
+    input.addEventListener("input", () => {
+      if (clearButton) {
+        clearButton.classList.toggle("hidden", !input.value.trim());
+      }
+    });
+  }
+
+  fetchRestaurantsCache();
+}
+
+async function handleDishSearch() {
+  const queryInput = document.getElementById("dish-search-input");
+  const query = queryInput?.value.trim() || "";
+
+  if (!query) {
+    clearDishSearch();
+    return;
+  }
+
+  const restaurants = await fetchRestaurantsCache();
+  renderSearchResults(searchDishes(restaurants, query), query);
+}
+
+function searchDishes(restaurants, query) {
+  const normalized = query.toLowerCase();
+  const results = [];
+
+  restaurants.forEach((restaurant) => {
+    const restaurantName = restaurant.name || "";
+    const restaurantId = restaurant.id;
+
+    (restaurant.dishes || []).forEach((dish) => {
+      const dishName = dish.name || "";
+      const dishDescription = dish.description || "";
+
+      if (
+        dishName.toLowerCase().includes(normalized) ||
+        restaurantName.toLowerCase().includes(normalized) ||
+        dishDescription.toLowerCase().includes(normalized)
+      ) {
+        results.push({
+          restaurantId,
+          restaurantName,
+          dish,
+        });
+      }
+    });
+  });
+
+  return results;
+}
+
+function clearDishSearch() {
+  const input = document.getElementById("dish-search-input");
+  const clearButton = document.getElementById("clear-search-button");
+
+  if (input) input.value = "";
+  if (clearButton) clearButton.classList.add("hidden");
+
+  if (restaurantsCache.length > 0) {
+    renderRestaurants(restaurantsCache);
+  } else {
+    fetchRestaurants();
+  }
+}
+
+function renderSearchResults(results, query) {
+  const mainContent = document.getElementById("main-content");
+  if (!mainContent) return;
+
+  let html = `
+    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+      <h1>Пошук: «${query}»</h1>
+      <p style="color:#4a5568;">Знайдено ${results.length} ${results.length === 1 ? 'результат' : 'результатів'}.</p>
+    </div>
+  `;
+
+  if (results.length === 0) {
+    html += `
+      <div class="search-result-card">
+        <p>Нічого не знайдено. Спробуйте інший запит.</p>
+      </div>
+    `;
+  } else {
+    html += `<div class="search-results">
+    `;
+
+    results.forEach((item) => {
+      html += `
+        <div class="search-result-card">
+          <div class="search-result-card-inner">
+            <img src="${item.dish.image || 'https://via.placeholder.com/180x120?text=No+Image'}" alt="${item.dish.name}" />
+            <div>
+              <h3 onclick="loadRestaurantMenuFromAPI(${item.restaurantId}, '${item.restaurantName.replace(/'/g, "\\'")}', false)">
+                ${item.restaurantName} — ${item.dish.name}
+              </h3>
+              <p>${item.dish.description || 'Опис відсутній'}</p>
+              <span class="search-result-badge">${item.restaurantName}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  }
+
+  mainContent.innerHTML = html;
 }
 
 function renderRestaurants(restaurantsList) {
